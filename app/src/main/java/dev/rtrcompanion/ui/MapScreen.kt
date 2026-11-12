@@ -63,6 +63,35 @@ fun parkedSpot(): Parked? {
     return Parked(p[0].toDoubleOrNull() ?: return null, p[1].toDoubleOrNull() ?: return null, p[2].toLongOrNull() ?: 0L)
 }
 
+/** Best last-known position from any provider, newest first; null if the phone has none. */
+@SuppressLint("MissingPermission")
+fun lastKnownPoint(lm: LocationManager): GeoPoint? {
+    val providers = buildList {
+        if (android.os.Build.VERSION.SDK_INT >= 31) add(LocationManager.FUSED_PROVIDER)
+        add(LocationManager.GPS_PROVIDER)
+        add(LocationManager.NETWORK_PROVIDER)
+        add(LocationManager.PASSIVE_PROVIDER)
+    }
+    return providers.mapNotNull { p ->
+        try {
+            lm.getLastKnownLocation(p)
+        } catch (e: Exception) {
+            null
+        }
+    }.maxByOrNull { it.time }?.let { GeoPoint(it.latitude, it.longitude) }
+}
+
+fun hasInternet(ctx: android.content.Context): Boolean = try {
+    val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
+    val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+    caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+} catch (e: Exception) {
+    true
+}
+
+/** Centre of India, used only when there is no position, parked bike or ride to show. */
+private val FALLBACK = GeoPoint(20.59, 78.96)
+
 fun navigateTo(ctx: android.content.Context, lat: Double, lon: Double) {
     val uri = Uri.parse("google.navigation:q=$lat,$lon&mode=w")
     val i = Intent(Intent.ACTION_VIEW, uri)
@@ -96,9 +125,13 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
             isTilesScaledToDpi = true
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             overlayManager.tilesOverlay.setColorFilter(TilesOverlay.INVERT_COLORS)
-            controller.setZoom(16.0)
+            // Never start in the ocean at 0,0: begin on India until something better is known.
+            controller.setZoom(5.0)
+            controller.setCenter(FALLBACK)
         }
     }
+    var centred by remember { mutableStateOf(false) }
+    val online = remember { hasInternet(ctx) }
     val meMarker = remember { Marker(map).apply { setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER); title = "You" } }
     val track = remember {
         Polyline(map).apply {
@@ -123,10 +156,14 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
         }
         if (granted && lm != null) {
-            try {
-                lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { me = GeoPoint(it.latitude, it.longitude) }
-                lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1_000L, 0f, listener, Looper.getMainLooper())
-            } catch (ignored: Exception) {
+            lastKnownPoint(lm)?.let { me = it }
+            for (provider in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+                try {
+                    if (lm.isProviderEnabled(provider)) {
+                        lm.requestLocationUpdates(provider, 1_000L, 0f, listener, Looper.getMainLooper())
+                    }
+                } catch (ignored: Exception) {
+                }
             }
         }
         onDispose {
@@ -147,7 +184,20 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 title = "Bike parked here"
             })
-            if (me == null) map.controller.setCenter(GeoPoint(p.lat, p.lon))
+            if (me == null) {
+                map.controller.setZoom(16.0)
+                map.controller.setCenter(GeoPoint(p.lat, p.lon))
+                centred = true
+            }
+        }
+        if (parked == null && me == null) {
+            // Show the most recent ride's end point if there is one.
+            val last = RideRecorder.lastFix()
+            if (last != null) {
+                map.controller.setZoom(15.0)
+                map.controller.setCenter(GeoPoint(last.first, last.second))
+                centred = true
+            }
         }
         map.overlays.add(track)
         map.overlays.add(meMarker)
@@ -157,7 +207,14 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
     LaunchedEffect(me, follow) {
         val p = me ?: return@LaunchedEffect
         meMarker.position = p
-        if (follow) map.controller.animateTo(p)
+        if (!centred) {
+            // First fix: jump straight to street level on the rider.
+            map.controller.setZoom(16.0)
+            map.controller.setCenter(p)
+            centred = true
+        } else if (follow) {
+            map.controller.animateTo(p)
+        }
         map.invalidate()
     }
 
@@ -207,11 +264,26 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (!online) {
+                Panel(Modifier.fillMaxWidth(), color = Rtr.RedDeep) {
+                    Text("No internet: map tiles can't load.", fontWeight = FontWeight.SemiBold)
+                    Text("Areas you have viewed before still show from the cache.", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+                }
+            }
             if (!granted) {
                 Panel(Modifier.fillMaxWidth()) {
                     Text("Allow location to see where you are.")
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = onRequestPermissions) { Text("Allow location") }
+                }
+            } else if (me == null) {
+                Panel(Modifier.fillMaxWidth(), color = Rtr.Panel.copy(alpha = 0.92f)) {
+                    Text("Finding your location…", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Make sure Location is switched on in quick settings. GPS can take a minute indoors.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Rtr.Muted,
+                    )
                 }
             }
             parked?.let { p ->
