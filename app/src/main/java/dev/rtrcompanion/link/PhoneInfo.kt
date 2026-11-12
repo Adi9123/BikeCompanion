@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.BatteryManager
 import android.os.Build
 import android.telephony.TelephonyManager
+import dev.rtrcompanion.data.AppState
+import dev.rtrcompanion.data.Prefs
 import dev.rtrcompanion.protocol.PhoneStatus
 import java.util.Calendar
 
@@ -37,6 +39,8 @@ object PhoneInfo {
             day = cal.get(Calendar.DAY_OF_MONTH),
             month = cal.get(Calendar.MONTH) + 1,
             year2 = cal.get(Calendar.YEAR) % 100,
+            missedCalls = AppState.missedCalls.value.coerceIn(0, 99),
+            overspeedKmh = if (Prefs.overspeedOn) Prefs.overspeedKmh.coerceIn(20, 200) else 120,
         )
     }
 }

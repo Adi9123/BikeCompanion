@@ -52,6 +52,56 @@ object Prefs {
         get() = sp.getInt("autoEndMinutes", 3)
         set(v) = sp.edit().putInt("autoEndMinutes", v).apply()
 
+    // -------------------------------------------------------- cluster extras
+
+    /** Ask the cluster to warn above [overspeedKmh]. */
+    var overspeedOn: Boolean
+        get() = sp.getBoolean("overspeedOn", false)
+        set(v) = sp.edit().putBoolean("overspeedOn", v).apply()
+
+    var overspeedKmh: Int
+        get() = sp.getInt("overspeedKmh", 80)
+        set(v) = sp.edit().putInt("overspeedKmh", v).apply()
+
+    var callAlerts: Boolean
+        get() = sp.getBoolean("callAlerts", true)
+        set(v) = sp.edit().putBoolean("callAlerts", v).apply()
+
+    var messageAlerts: Boolean
+        get() = sp.getBoolean("messageAlerts", true)
+        set(v) = sp.edit().putBoolean("messageAlerts", v).apply()
+
+    var musicOnCluster: Boolean
+        get() = sp.getBoolean("musicOnCluster", false)
+        set(v) = sp.edit().putBoolean("musicOnCluster", v).apply()
+
+    /** The cluster's custom-text line may expect characters in reverse order. */
+    var clusterTextReversed: Boolean
+        get() = sp.getBoolean("textReversed", true)
+        set(v) = sp.edit().putBoolean("textReversed", v).apply()
+
+    /** Phone notifications for overheating, charging problems, faults, reserve. */
+    var alertsOn: Boolean
+        get() = sp.getBoolean("alertsOn", true)
+        set(v) = sp.edit().putBoolean("alertsOn", v).apply()
+
+    // ---------------------------------------------------------------- garage
+
+    /** Last odometer reading seen, for service reminders while disconnected. */
+    var lastOdoKm: Double
+        get() = sp.getLong("lastOdoM", 0L) / 1000.0
+        set(v) = sp.edit().putLong("lastOdoM", (v * 1000).toLong()).apply()
+
+    /** "lat,lon,time" of where the bike was switched off, or empty. */
+    var parked: String
+        get() = sp.getString("parked", "") ?: ""
+        set(v) = sp.edit().putString("parked", v).apply()
+
+    /** Learned switch bits, see SwitchLearn. */
+    var switchMap: String
+        get() = sp.getString("switchMap", "") ?: ""
+        set(v) = sp.edit().putString("switchMap", v).apply()
+
     // ------------------------------------------------------------------ fuel
 
     /** Tank including reserve. RTR 160 4V: 12 litres. */

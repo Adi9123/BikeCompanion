@@ -4,6 +4,7 @@ import dev.rtrcompanion.protocol.ApacheFields
 import dev.rtrcompanion.protocol.Inbound
 import dev.rtrcompanion.protocol.NavInstruction
 import dev.rtrcompanion.protocol.Scramble
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -68,6 +69,12 @@ object AppState {
 
     /** Current navigation step from Google Maps (or a test), null when not navigating. */
     val nav = MutableStateFlow<NavInstruction?>(null)
+
+    /** Text waiting to be shown on the cluster's message line (calls, messages, music, tests). */
+    val clusterTexts = MutableSharedFlow<String>(extraBufferCapacity = 8)
+
+    /** Missed calls currently in the notification shade; sent in the phone-status frame. */
+    val missedCalls = MutableStateFlow(0)
 
     /** Whether the notification listener is connected, i.e. notification access is granted. */
     val navAccess = MutableStateFlow(false)

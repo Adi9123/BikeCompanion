@@ -42,6 +42,10 @@ import dev.rtrcompanion.data.LinkPhase
 import dev.rtrcompanion.data.Reading
 import dev.rtrcompanion.protocol.ApacheFields
 import dev.rtrcompanion.protocol.NavInstruction
+import dev.rtrcompanion.garage.Switch
+import dev.rtrcompanion.monitor.Alert
+import dev.rtrcompanion.monitor.BikeMonitor
+import dev.rtrcompanion.monitor.Severity
 import dev.rtrcompanion.ride.RecPhase
 import dev.rtrcompanion.ride.RideRecorder
 import java.util.Locale
@@ -64,6 +68,8 @@ fun RideScreen(onOpenBike: () -> Unit) {
     val readings by AppState.readings.collectAsState()
     val nav by AppState.nav.collectAsState()
     val rec by RideRecorder.state.collectAsState()
+    val alerts by BikeMonitor.alerts.collectAsState()
+    val switches by BikeMonitor.switches.collectAsState()
     val now = rememberNow()
     fun stale(key: String) = readings[key]?.let { now - it.at > STALE_MS } ?: true
 
@@ -77,6 +83,11 @@ fun RideScreen(onOpenBike: () -> Unit) {
             StatusPill(link, Modifier.clickable { onOpenBike() })
             Spacer(Modifier.weight(1f))
             RecordingPill(rec)
+        }
+
+        alerts.forEach { a ->
+            Spacer(Modifier.height(10.dp))
+            AlertBanner(a)
         }
 
         if (link.phase == LinkPhase.IDLE && readings.isEmpty()) {
@@ -101,6 +112,15 @@ fun RideScreen(onOpenBike: () -> Unit) {
                 gear = valueOf(readings, "gear"),
                 stale = stale("speed"),
             )
+        }
+
+        if (switches.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SwitchChip("◀ Left", switches[Switch.LEFT], Rtr.Green, Modifier.weight(1f))
+                SwitchChip("High beam", switches[Switch.HIGH_BEAM], Rtr.Blue, Modifier.weight(1f))
+                SwitchChip("Stand", switches[Switch.SIDE_STAND], Rtr.Red, Modifier.weight(1f))
+                SwitchChip("Right ▶", switches[Switch.RIGHT], Rtr.Green, Modifier.weight(1f))
+            }
         }
 
         nav?.let {
@@ -189,6 +209,48 @@ fun RideScreen(onOpenBike: () -> Unit) {
             color = Rtr.Muted,
         )
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun AlertBanner(a: Alert) {
+    val color = when (a.severity) {
+        Severity.DANGER -> Rtr.Red
+        Severity.WARN -> Rtr.Amber
+        Severity.INFO -> Rtr.Blue
+    }
+    Panel(Modifier.fillMaxWidth(), color = color.copy(alpha = 0.18f)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Dot(color, 10)
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(a.title, fontWeight = FontWeight.Bold, color = color)
+                Text(a.detail, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+/** One lamp or switch: lit in its colour when on, dim when off, dashed out when unknown. */
+@Composable
+private fun SwitchChip(label: String, on: Boolean?, color: Color, modifier: Modifier) {
+    Box(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (on == true) color.copy(alpha = 0.25f) else Rtr.Panel2)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = when (on) {
+                true -> color
+                false -> Rtr.Muted
+                null -> Rtr.Line
+            },
+            fontWeight = if (on == true) FontWeight.Bold else FontWeight.Normal,
+        )
     }
 }
 

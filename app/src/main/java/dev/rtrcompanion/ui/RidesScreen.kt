@@ -68,14 +68,7 @@ fun RidesScreen(openId: String?, onOpen: (String?) -> Unit) {
         RideReport(openId, onBack = { onOpen(null) })
         return
     }
-    var sub by rememberSaveable { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = sub, containerColor = Rtr.Bg, contentColor = Rtr.Text) {
-            Tab(selected = sub == 0, onClick = { sub = 0 }, text = { Text("Rides") })
-            Tab(selected = sub == 1, onClick = { sub = 1 }, text = { Text("Fuel") })
-        }
-        if (sub == 0) RideList(onOpen) else FuelScreen()
-    }
+    RideList(onOpen)
 }
 
 @Composable
@@ -320,6 +313,7 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                     }
                 }
             }
+            item { RidingStyle(s) }
             item { LineChart("Speed", "km/h", series { it.speed?.toFloat() }, Rtr.Teal) }
             item { LineChart("Engine speed", "rpm", series { it.rpm?.toFloat() }, Rtr.Red) }
             item { LineChart("Throttle", "%", series { it.throttle?.toFloat() }, Rtr.Violet) }
@@ -341,6 +335,46 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                 )
                 Spacer(Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+/** How the ride was ridden: smoothness score and the events behind it. */
+@Composable
+private fun RidingStyle(s: RideSummary) {
+    val color = when {
+        s.smoothness >= 80 -> Rtr.Green
+        s.smoothness >= 60 -> Rtr.Amber
+        else -> Rtr.Red
+    }
+    Panel(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Riding style", fontWeight = FontWeight.SemiBold)
+                Text(
+                    when {
+                        s.smoothness >= 80 -> "Smooth and easy on the bike"
+                        s.smoothness >= 60 -> "Mostly smooth"
+                        else -> "Aggressive: harsh throttle, hard braking or high revs"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Rtr.Muted,
+                )
+            }
+            Text("${s.smoothness}", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = color)
+            Text("/100", color = Rtr.Muted, modifier = Modifier.padding(start = 2.dp))
+        }
+        Spacer(Modifier.height(10.dp))
+        Row {
+            Mini("Harsh accel", "${s.harshAccel}", Modifier.weight(1f))
+            Mini("Hard brake", "${s.hardBrake}", Modifier.weight(1f))
+            Mini("Over 8k rpm", duration(s.overRevS), Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        Row {
+            Mini("Avg throttle", "${s.avgThrottle}%", Modifier.weight(1f))
+            Mini("Warm-up", s.warmupS?.let { duration(it) } ?: "—", Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
         }
     }
 }

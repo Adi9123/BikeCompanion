@@ -53,9 +53,21 @@ data class RideSummary(
     val hasRoute: Boolean = false,
     /** Fuel-injection counter steps during the ride; litres once the counter is calibrated. */
     val injCounts: Long = 0,
+    /** Seconds at or above [RideStats.OVER_REV_RPM]. */
+    val overRevS: Long = 0,
+    /** Speed gained 10 km/h or more within a second. */
+    val harshAccel: Int = 0,
+    /** Speed lost 12 km/h or more within a second. */
+    val hardBrake: Int = 0,
+    /** Seconds from the start until the engine reached 60 °C. */
+    val warmupS: Long? = null,
+    val avgThrottle: Int = 0,
+    /** 0..100, higher is smoother. */
+    val smoothness: Int = 0,
 )
 
 object RideStats {
+    const val OVER_REV_RPM = 8_000
     private const val EARTH_M = 6_371_000.0
 
     fun haversineM(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
@@ -109,6 +121,26 @@ object RideStats {
             }
         }
         val dist = distanceKm(samples)
+        var overRev = 0L
+        var harsh = 0
+        var brake = 0
+        for (i in 1 until samples.size) {
+            val a = samples[i - 1]
+            val b = samples[i]
+            val dt = ((b.t - a.t) / 1000).coerceIn(0, 5)
+            if ((b.rpm ?: 0) >= OVER_REV_RPM) overRev += dt
+            val sa = a.speed
+            val sb = b.speed
+            if (sa != null && sb != null && b.t - a.t in 500..1_600) {
+                if (sb - sa >= 10) harsh++
+                if (sa - sb >= 12) brake++
+            }
+        }
+        val warm = samples.firstOrNull { (it.engineTemp ?: 0) >= 60 }?.let { (it.t - samples.first().t) / 1000 }
+        val throttles = samples.filter { (it.speed ?: 0) > 0 }.mapNotNull { it.throttle }
+        val events = (harsh + brake) / maxOf(dist / 10.0, 1.0)
+        val overRevPct = if (moving > 0) overRev.toDouble() / moving else 0.0
+        val smooth = (100 - events * 8 - overRevPct * 50).coerceIn(0.0, 100.0).roundToInt()
         val rpms = samples.mapNotNull { it.rpm }.filter { it > 0 }
         val batteries = samples.mapNotNull { it.battery }.filter { it > 0f }
         val mileage = mileageKmpl?.takeIf { it > 0 }
@@ -133,6 +165,12 @@ object RideStats {
             gearSeconds = gears,
             hasRoute = samples.count { it.lat != null && it.lon != null } >= 2,
             injCounts = samples.mapNotNull { it.inj }.let { if (it.size >= 2) (it.last() - it.first()).coerceAtLeast(0) else 0L },
+            overRevS = overRev,
+            harshAccel = harsh,
+            hardBrake = brake,
+            warmupS = warm,
+            avgThrottle = if (throttles.isEmpty()) 0 else throttles.average().roundToInt(),
+            smoothness = smooth,
         )
     }
 }
@@ -211,6 +249,12 @@ object RideCsv {
         "gears" to s.gearSeconds.entries.sortedBy { it.key }.joinToString(";") { "${it.key}:${it.value}" },
         "hasRoute" to s.hasRoute.toString(),
         "injCounts" to s.injCounts.toString(),
+        "overRevS" to s.overRevS.toString(),
+        "harshAccel" to s.harshAccel.toString(),
+        "hardBrake" to s.hardBrake.toString(),
+        "warmupS" to (s.warmupS?.toString() ?: ""),
+        "avgThrottle" to s.avgThrottle.toString(),
+        "smoothness" to s.smoothness.toString(),
     )
 
     fun summaryOf(m: Map<String, String>): RideSummary = RideSummary(
@@ -239,6 +283,12 @@ object RideCsv {
         }.toMap(),
         hasRoute = m["hasRoute"] == "true",
         injCounts = m["injCounts"]?.toLongOrNull() ?: 0L,
+        overRevS = m["overRevS"]?.toLongOrNull() ?: 0L,
+        harshAccel = m["harshAccel"]?.toIntOrNull() ?: 0,
+        hardBrake = m["hardBrake"]?.toIntOrNull() ?: 0,
+        warmupS = m["warmupS"]?.toLongOrNull(),
+        avgThrottle = m["avgThrottle"]?.toIntOrNull() ?: 0,
+        smoothness = m["smoothness"]?.toIntOrNull() ?: 0,
     )
 }
 

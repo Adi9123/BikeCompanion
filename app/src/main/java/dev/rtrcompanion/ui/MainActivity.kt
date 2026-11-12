@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -57,14 +58,17 @@ private data class Tab(val label: String, val icon: ImageVector)
 
 private val tabs = listOf(
     Tab("Ride", Icons.Filled.Home),
+    Tab("Map", Icons.Filled.LocationOn),
     Tab("Rides", Icons.AutoMirrored.Filled.List),
-    Tab("Diagnostics", Icons.Filled.Build),
-    Tab("Bike", Icons.Filled.Settings),
+    Tab("Garage", Icons.Filled.Build),
+    Tab("More", Icons.Filled.Settings),
 )
 
 private const val TAB_RIDE = 0
-private const val TAB_RIDES = 1
-private const val TAB_BIKE = 3
+private const val TAB_MAP = 1
+private const val TAB_RIDES = 2
+private const val TAB_GARAGE = 3
+private const val TAB_BIKE = 4
 
 @Composable
 fun AppRoot() {
@@ -124,9 +128,10 @@ fun AppRoot() {
         ) {
             when (tab) {
                 TAB_RIDE -> RideScreen(onOpenBike = { tab = TAB_BIKE })
+                TAB_MAP -> MapScreen(onRequestPermissions = { launcher.launch(Perms.all()) })
                 TAB_RIDES -> RidesScreen(openRide) { openRide = it }
-                2 -> DiagnosticsScreen()
-                else -> BikeScreen(
+                TAB_GARAGE -> GarageScreen()
+                else -> MoreScreen(
                     permissionsGranted = granted,
                     onRequestPermissions = { launcher.launch(Perms.all()) },
                 )

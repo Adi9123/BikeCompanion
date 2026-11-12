@@ -24,7 +24,13 @@ import dev.rtrcompanion.R
 import dev.rtrcompanion.data.AppState
 import dev.rtrcompanion.data.LinkPhase
 import dev.rtrcompanion.data.Prefs
+import dev.rtrcompanion.fuel.FuelMath
 import dev.rtrcompanion.fuel.FuelMeter
+import dev.rtrcompanion.fuel.FuelStore
+import dev.rtrcompanion.garage.GarageStore
+import dev.rtrcompanion.monitor.Alert
+import dev.rtrcompanion.monitor.BikeMonitor
+import dev.rtrcompanion.ui.BikeWidget
 import dev.rtrcompanion.log.EventLog
 import dev.rtrcompanion.ride.RecPhase
 import dev.rtrcompanion.ride.RecState
@@ -67,6 +73,49 @@ class LinkService : Service() {
         ensureChannel()
         link = BleLink(applicationContext, scope)
         store = RideStore(applicationContext)
+        garage = GarageStore(applicationContext)
+        fuelStore = FuelStore(applicationContext)
+        BikeMonitor.notifier = { postAlert(it) }
+    }
+
+    private lateinit var garage: GarageStore
+    private lateinit var fuelStore: FuelStore
+    private var ticks = 0L
+
+    private fun refreshFuelStatus() {
+        val r = AppState.readings.value
+        BikeMonitor.fuelStatus = FuelMath.status(
+            refuels = fuelStore.list(),
+            tankLitres = Prefs.tankLitres,
+            reserveLitres = Prefs.reserveLitres,
+            totalBars = Prefs.fuelBars,
+            bars = r["fuel"]?.raw?.toInt()?.takeIf { it in 0..Prefs.fuelBars },
+            injNow = Prefs.injTotal,
+            clusterMileage = r["avgMileageA"]?.raw?.toInt(),
+        )
+    }
+
+    private fun postAlert(a: Alert) {
+        try {
+            val nm = getSystemService(NotificationManager::class.java) ?: return
+            if (nm.getNotificationChannel(ALERT_CHANNEL) == null) {
+                nm.createNotificationChannel(NotificationChannel(ALERT_CHANNEL, "Bike alerts", NotificationManager.IMPORTANCE_HIGH))
+            }
+            val open = PendingIntent.getActivity(
+                this, 0, Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            val n = NotificationCompat.Builder(this, ALERT_CHANNEL)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(a.title)
+                .setContentText(a.detail)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(open)
+                .build()
+            nm.notify(ALERT_BASE + (a.id.hashCode() and 0xFF), n)
+        } catch (ignored: Exception) {
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -115,6 +164,10 @@ class LinkService : Service() {
                     val now = System.currentTimeMillis()
                     FuelMeter.tick(now, live)
                     RideRecorder.tick(now, live, store)
+                    if (ticks % 30 == 0) refreshFuelStatus()
+                    BikeMonitor.tick(now, live) { garage.addBattery(it) }
+                    if (ticks % 60 == 5) BikeWidget.updateAll(applicationContext)
+                    ticks++
                     val wantGps = live || RideRecorder.state.value.phase != RecPhase.IDLE
                     if (wantGps) startLocation() else stopLocation()
                     delay(1_000)
@@ -260,6 +313,8 @@ class LinkService : Service() {
         private const val TAG = "Service"
         private const val CHANNEL = "link"
         private const val NOTIF_ID = 1
+        private const val ALERT_CHANNEL = "alerts"
+        private const val ALERT_BASE = 100
         const val ACTION_CONNECT = "dev.rtrcompanion.CONNECT"
         const val ACTION_DISCONNECT = "dev.rtrcompanion.DISCONNECT"
         const val ACTION_SEND_NAME = "dev.rtrcompanion.SEND_NAME"

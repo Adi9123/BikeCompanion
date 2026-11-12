@@ -27,9 +27,10 @@ class NavListener : NotificationListenerService() {
         AppState.navAccess.value = true
         EventLog.i(TAG, "Notification access active")
         try {
-            activeNotifications?.forEach { handle(it) }
+            activeNotifications?.forEach { if (it.packageName in MAPS) handle(it) }
         } catch (ignored: Exception) {
         }
+        countMissedCalls()
     }
 
     override fun onListenerDisconnected() {
@@ -37,10 +38,11 @@ class NavListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        handle(sbn)
+        if (sbn.packageName in MAPS) handle(sbn) else handlePhone(sbn)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        if (isMissedCall(sbn)) countMissedCalls()
         if (sbn.packageName in MAPS && sbn.key == activeKey) {
             activeKey = null
             lastLogged = null
@@ -75,8 +77,83 @@ class NavListener : NotificationListenerService() {
         AppState.nav.value = step
     }
 
+    // ------------------------------------------------- calls, messages, music
+
+    private val sent = HashMap<String, String>()
+
+    private fun title(n: Notification): String =
+        n.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim().orEmpty()
+
+    private fun text(n: Notification): String =
+        n.extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim().orEmpty()
+
+    private fun isMissedCall(sbn: StatusBarNotification): Boolean {
+        val n = sbn.notification ?: return false
+        return n.category == "missed_call" ||
+            (sbn.packageName in DIALERS && title(n).contains("missed", ignoreCase = true))
+    }
+
+    private fun countMissedCalls() {
+        val count = try {
+            activeNotifications?.filter { isMissedCall(it) }?.sumOf { maxOf(1, it.notification.number) } ?: 0
+        } catch (e: Exception) {
+            0
+        }
+        if (AppState.missedCalls.value != count) {
+            AppState.missedCalls.value = count
+            EventLog.i(TAG, "Missed calls: $count")
+        }
+    }
+
+    /** Sends a short line to the cluster once per notification and content. */
+    private fun once(key: String, line: String) {
+        if (sent[key] == line) return
+        sent[key] = line
+        if (sent.size > 100) sent.clear()
+        AppState.clusterTexts.tryEmit(line)
+        EventLog.i(TAG, "To cluster: $line")
+    }
+
+    private fun handlePhone(sbn: StatusBarNotification) {
+        val n = sbn.notification ?: return
+        if ((n.flags and Notification.FLAG_GROUP_SUMMARY) != 0) return
+        if (isMissedCall(sbn)) {
+            countMissedCalls()
+            return
+        }
+        val pkg = sbn.packageName
+        when {
+            Prefs.callAlerts && n.category == Notification.CATEGORY_CALL &&
+                (text(n).contains("incoming", true) || title(n).contains("incoming", true)) -> {
+                val who = title(n).takeUnless { it.contains("incoming", true) } ?: text(n)
+                once(sbn.key, "CALL $who")
+            }
+            Prefs.messageAlerts && pkg in WHATSAPP -> {
+                val from = title(n).ifBlank { return }
+                once(sbn.key + text(n), "WA $from")
+            }
+            Prefs.messageAlerts && (pkg in SMS || n.category == Notification.CATEGORY_MESSAGE) && pkg !in WHATSAPP -> {
+                val from = title(n).ifBlank { return }
+                once(sbn.key + text(n), "SMS $from")
+            }
+            Prefs.musicOnCluster && n.extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true -> {
+                val song = title(n).ifBlank { return }
+                once("music", song)
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "Nav"
+        val DIALERS = setOf(
+            "com.google.android.dialer", "com.android.dialer", "com.samsung.android.incallui",
+            "com.android.incallui", "com.android.server.telecom", "com.samsung.android.dialer",
+        )
+        val WHATSAPP = setOf("com.whatsapp", "com.whatsapp.w4b")
+        val SMS = setOf(
+            "com.google.android.apps.messaging", "com.samsung.android.messaging", "com.android.mms",
+            "org.telegram.messenger",
+        )
         const val SOURCE = "Google Maps"
         val MAPS = setOf("com.google.android.apps.maps")
     }

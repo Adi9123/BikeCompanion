@@ -81,6 +81,32 @@ object Outbound {
 
     fun riderName(name: String): ByteArray = text(ID_RIDER_NAME, name)
 
+    // ----------------------------------------------------------- custom text
+
+    /** Characters the cluster can show; anything else becomes a space. Up to 17. */
+    fun clusterSanitize(text: String): String =
+        text.map { c -> if (c in 'A'..'Z' || c in 'a'..'z' || c in '0'..'9' || c == ' ') c else ' ' }
+            .joinToString("")
+            .replace(Regex(" +"), " ")
+            .trim()
+            .take(TEXT_MAX)
+
+    /**
+     * Free text on the cluster's message line: `5B 4C`, 17 characters, `FF`.
+     * The official app sends this family's text with the characters in reverse
+     * order; [reversed] follows that, and can be switched off if the cluster
+     * shows it backwards.
+     */
+    fun clusterText(text: String, reversed: Boolean): ByteArray {
+        val f = ByteArray(Codec.FRAME_SIZE)
+        f[0] = Codec.START_OUT.toByte()
+        f[1] = ID_TEXT_LINE.toByte()
+        val chars = clusterSanitize(text).toByteArray(Charsets.US_ASCII)
+        (if (reversed) chars.reversedArray() else chars).copyInto(f, destinationOffset = 2)
+        f[19] = Codec.END.toByte()
+        return f
+    }
+
     // ------------------------------------------------------------ navigation
 
     const val ID_NAV_CONTROL = 0x4E

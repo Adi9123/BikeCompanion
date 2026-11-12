@@ -52,6 +52,13 @@ object RideRecorder {
         fixAt = now
     }
 
+    /** Last GPS fix from the last half hour, for the parked-bike location. */
+    fun lastFix(): Pair<Double, Double>? {
+        val la = lat
+        val lo = lon
+        return if (la != null && lo != null && System.currentTimeMillis() - fixAt < 30 * 60_000L) la to lo else null
+    }
+
     /** Copy of the samples so far, for the live view. */
     @Synchronized
     fun snapshot(): List<RideSample> = ArrayList(samples)

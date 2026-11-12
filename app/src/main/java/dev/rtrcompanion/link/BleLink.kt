@@ -217,6 +217,7 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
         rssiJob?.cancel()
         writerJob?.cancel()
         navJob?.cancel()
+        textJob?.cancel()
         queue.close()
         keepaliveJob = null
         watchdogJob = null
@@ -246,7 +247,22 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
         startWriter()
         startKeepalive()
         startNav()
+        startTexts()
         startRssi()
+    }
+
+    private var textJob: Job? = null
+
+    /** Calls, messages and music titles for the cluster's message line. */
+    private fun startTexts() {
+        textJob?.cancel()
+        textJob = scope.launch {
+            AppState.clusterTexts.collect { text ->
+                val frame = Outbound.clusterText(text, Prefs.clusterTextReversed)
+                enqueue(frame, "text \"${Outbound.clusterSanitize(text)}\"")
+                delay(3_000)   // give the rider time to read it before the next one
+            }
+        }
     }
 
     // ------------------------------------------------------------- outbound
