@@ -56,7 +56,9 @@ jobs:
           echo "OK: no INTERNET permission"
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk "RTRCompanion-${GITHUB_SHA::7}.apk"
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk "RTRCompanion-${GITHUB_SHA::7}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk RTRCompanion.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -74,4 +76,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: RTRCompanion-*.apk
+          files: RTRCompanion.apk

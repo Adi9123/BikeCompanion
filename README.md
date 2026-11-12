@@ -3,6 +3,18 @@
 An independent Android app for **TVS Apache motorcycles with SmartXonnect**
 (Bluetooth instrument cluster), built first for the Apache RTR 160 4V.
 
+## Download
+
+**[Download the latest APK](https://github.com/Adi9123/RTRCompanion/releases/latest/download/RTRCompanion.apk)**
+(Android 8.0 or newer). All versions are on the
+[Releases page](https://github.com/Adi9123/RTRCompanion/releases).
+
+Open the file on the phone and allow "Install unknown apps" when asked. Until
+the project has a stable signing key, uninstall the previous version before
+installing a new one.
+
+## About
+
 It talks to the cluster directly over Bluetooth Low Energy. There is no
 account, no cloud and no internet permission; the build fails if one sneaks in.
 
@@ -29,14 +41,12 @@ A `—` means the bike has not sent that value. The app never shows a made-up
 
 Details: [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
-## Getting the APK
+## Builds
 
-Every push to `main` builds an APK on GitHub Actions:
-
-1. Open the **Actions** tab, then the latest **Build APK** run.
-2. Download the **RTRCompanion-apk** artifact (a zip), unzip it, and install the APK on the phone.
-
-A tag such as `v0.1.0` also attaches the APK to a GitHub Release.
+Every push to `main` builds and tests the app on GitHub Actions; the APK of any
+commit is attached to its run as the **RTRCompanion-apk** artifact. Pushing a
+tag such as `v0.1.1` publishes that build as a GitHub Release, which is what the
+download link above points to.
 
 ### Updates without uninstalling (optional)
 
