@@ -155,17 +155,36 @@ fun RideScreen(onOpenBike: () -> Unit) {
             StatTile("Intake air", valueOf(readings, "intakeTemp"), "°C", m, stale = stale("intakeTemp"))
             StatTile("Top speed", valueOf(readings, "topSpeed"), "km/h", m, stale = stale("topSpeed"))
         }
+        SectionTitle("Fuel")
+        val fuel = rememberFuelStatus(rememberRefuels())
+        Panel(Modifier.fillMaxWidth(), color = if (fuel.onReserve) Rtr.RedDeep else Rtr.Panel) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Column(Modifier.weight(1f)) {
+                    Text("FUEL LEFT", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                    Text(
+                        fuel.litresLeft?.let { (if (fuel.measured) "" else "≈ ") + litres(it) + " l" } ?: "—",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("RANGE", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                    Text(fuel.rangeKm?.let { "≈ ${it.toInt()} km" } ?: "—", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                }
+                if (fuel.onReserve) Pill("Reserve", Rtr.Red)
+            }
+            Spacer(Modifier.height(10.dp))
+            FuelBars(readings["fuel"]?.raw?.toInt(), dev.rtrcompanion.data.Prefs.fuelBars)
+        }
         Spacer(Modifier.height(10.dp))
         Panel(Modifier.fillMaxWidth()) {
             Bar("Throttle", readings["throttle"]?.raw?.let { it / 200f }, valueOf(readings, "throttle") + " %", Rtr.Teal)
-            Spacer(Modifier.height(12.dp))
-            Bar("Fuel", readings["fuel"]?.raw?.let { it / 6f }, valueOf(readings, "fuel") + " bars", Rtr.Green)
         }
 
         Spacer(Modifier.height(16.dp))
         Text(
             "— means the bike has not sent this value; faded tiles are more than 5 s old. " +
-                "Range to empty is not shown because the bike does not send it.",
+                "Range is worked out by the app from fuel left and your mileage; the bike does not send it.",
             style = MaterialTheme.typography.bodySmall,
             color = Rtr.Muted,
         )

@@ -104,6 +104,7 @@ object RideRecorder {
             odo = fresh("odometer")?.let { it / 10.0 },
             lat = if (fix) lat else null,
             lon = if (fix) lon else null,
+            inj = Prefs.injTotal,
         )
         samples += smp
         val s = _state.value

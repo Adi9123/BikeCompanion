@@ -24,6 +24,8 @@ data class RideSample(
     val odo: Double? = null,
     val lat: Double? = null,
     val lon: Double? = null,
+    /** The app's lifetime fuel-injection counter total at this moment. */
+    val inj: Long? = null,
 )
 
 data class RideSummary(
@@ -49,6 +51,8 @@ data class RideSummary(
     /** Seconds spent moving in each gear (0 = neutral). */
     val gearSeconds: Map<Int, Long> = emptyMap(),
     val hasRoute: Boolean = false,
+    /** Fuel-injection counter steps during the ride; litres once the counter is calibrated. */
+    val injCounts: Long = 0,
 )
 
 object RideStats {
@@ -128,6 +132,7 @@ object RideStats {
             mileageKmpl = mileage,
             gearSeconds = gears,
             hasRoute = samples.count { it.lat != null && it.lon != null } >= 2,
+            injCounts = samples.mapNotNull { it.inj }.let { if (it.size >= 2) (it.last() - it.first()).coerceAtLeast(0) else 0L },
         )
     }
 }
@@ -137,13 +142,13 @@ object RideStats {
  * with one row per second. Plain text so a ride can be opened in a spreadsheet.
  */
 object RideCsv {
-    const val HEADER = "t,speed,rpm,gear,engineTemp,battery,throttle,odo,lat,lon"
+    const val HEADER = "t,speed,rpm,gear,engineTemp,battery,throttle,odo,lat,lon,inj"
 
     fun write(summary: RideSummary, samples: List<RideSample>): String = buildString {
         for ((k, v) in metaOf(summary)) append('#').append(k).append('=').append(v).append('\n')
         append(HEADER).append('\n')
         for (s in samples) {
-            val cells = listOf(s.t, s.speed, s.rpm, s.gear, s.engineTemp, s.battery, s.throttle, s.odo, s.lat, s.lon)
+            val cells = listOf(s.t, s.speed, s.rpm, s.gear, s.engineTemp, s.battery, s.throttle, s.odo, s.lat, s.lon, s.inj)
             append(cells.joinToString(",") { it?.toString() ?: "" }).append('\n')
         }
     }
@@ -180,6 +185,7 @@ object RideCsv {
             odo = c[7].toDoubleOrNull(),
             lat = c[8].toDoubleOrNull(),
             lon = c[9].toDoubleOrNull(),
+            inj = c.getOrNull(10)?.toLongOrNull(),
         )
     }
 
@@ -204,6 +210,7 @@ object RideCsv {
         "mileageKmpl" to (s.mileageKmpl?.toString() ?: ""),
         "gears" to s.gearSeconds.entries.sortedBy { it.key }.joinToString(";") { "${it.key}:${it.value}" },
         "hasRoute" to s.hasRoute.toString(),
+        "injCounts" to s.injCounts.toString(),
     )
 
     fun summaryOf(m: Map<String, String>): RideSummary = RideSummary(
@@ -231,6 +238,7 @@ object RideCsv {
             if (k != null && v != null) k to v else null
         }.toMap(),
         hasRoute = m["hasRoute"] == "true",
+        injCounts = m["injCounts"]?.toLongOrNull() ?: 0L,
     )
 }
 

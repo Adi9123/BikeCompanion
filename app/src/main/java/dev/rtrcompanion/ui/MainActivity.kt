@@ -85,6 +85,7 @@ fun AppRoot() {
         if (!Perms.allGranted(ctx)) launcher.launch(Perms.all())
     }
 
+    FuelDialogs()
     RideDialogs(onViewRide = { id ->
         openRide = id
         tab = TAB_RIDES

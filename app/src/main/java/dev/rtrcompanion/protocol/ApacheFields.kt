@@ -53,7 +53,7 @@ object ApacheFields {
         // 0x10 — ride
         FieldSpec(RIDE, 3, 1, "speed", "Speed", "km/h"),
         FieldSpec(RIDE, 4, 3, "odometer", "Odometer", "km", Fmt.TENTHS),
-        FieldSpec(RIDE, 7, 1, "fuel", "Fuel level (bars?)"),
+        FieldSpec(RIDE, 7, 1, "fuel", "Fuel level", "bars"),
         FieldSpec(RIDE, 8, 1, "avgSpeed", "Average speed", "km/h"),
         FieldSpec(RIDE, 9, 1, "mileage", "Mileage (raw)"),
         FieldSpec(RIDE, 10, 1, "topSpeed", "Top speed", "km/h"),
@@ -106,7 +106,7 @@ object ApacheFields {
         FieldSpec(ENGINE, 12, 1, "battery", "Battery", "V", Fmt.TENTHS),
         FieldSpec(ENGINE, 13, 2, "runTime", "Run time since start", "s"),
         FieldSpec(ENGINE, 15, 2, "distance", "Distance travelled (raw)"),
-        FieldSpec(ENGINE, 17, 2, "injVolume", "Injection volume (raw)"),
+        FieldSpec(ENGINE, 17, 2, "injVolume", "Fuel-injection counter (resets at key-on)"),
 
         // 0x19 — trips. Not in the official Apache table; read from the RTR 160 4V.
         FieldSpec(TRIPS, 5, 3, "tripA", "Trip A", "km"),

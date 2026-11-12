@@ -25,12 +25,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import dev.rtrcompanion.fuel.FuelMath
 import dev.rtrcompanion.ride.RecPhase
 import dev.rtrcompanion.ride.RideRecorder
 import dev.rtrcompanion.ride.RideSample
@@ -59,7 +64,18 @@ private fun dateLabel(t: Long): String = SimpleDateFormat("EEE d MMM · h:mm a",
 
 @Composable
 fun RidesScreen(openId: String?, onOpen: (String?) -> Unit) {
-    if (openId != null) RideReport(openId, onBack = { onOpen(null) }) else RideList(onOpen)
+    if (openId != null) {
+        RideReport(openId, onBack = { onOpen(null) })
+        return
+    }
+    var sub by rememberSaveable { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = sub, containerColor = Rtr.Bg, contentColor = Rtr.Text) {
+            Tab(selected = sub == 0, onClick = { sub = 0 }, text = { Text("Rides") })
+            Tab(selected = sub == 1, onClick = { sub = 1 }, text = { Text("Fuel") })
+        }
+        if (sub == 0) RideList(onOpen) else FuelScreen()
+    }
 }
 
 @Composable
@@ -158,6 +174,7 @@ private fun RideReport(id: String, onBack: () -> Unit) {
     val store = remember { RideStore(ctx.applicationContext) }
     val scope = rememberCoroutineScope()
     var confirmDelete by remember { mutableStateOf(false) }
+    val refuels = rememberRefuels()
     val data by produceState<Pair<RideSummary, List<RideSample>>?>(null, id) {
         value = withContext(Dispatchers.IO) { store.load(id) }
     }
@@ -228,9 +245,29 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                     StatTile("Top speed", "${s.maxSpeed}", "km/h", m, Rtr.Red)
                 }
                 Spacer(Modifier.height(10.dp))
+                val lpc = FuelMath.calibration(refuels)
+                val measured = if (lpc != null && s.injCounts > 0) s.injCounts * lpc else null
+                val fuel = measured ?: s.fuelL
+                val perLitre = FuelMath.pricePerLitre(refuels)
                 TileRow { m ->
-                    StatTile("Fuel used (est.)", s.fuelL?.let { String.format(Locale.US, "%.2f", it) } ?: "—", "l", m, Rtr.Green)
-                    StatTile("Mileage", s.mileageKmpl?.toString() ?: "—", "km/l", m, Rtr.Green)
+                    StatTile(
+                        if (measured != null) "Fuel used" else "Fuel used (est.)",
+                        fuel?.let { String.format(Locale.US, "%.2f", it) } ?: "—", "l", m, Rtr.Green,
+                    )
+                    StatTile(
+                        "Mileage",
+                        if (measured != null && measured > 0.0) String.format(Locale.US, "%.1f", s.distanceKm / measured) else (s.mileageKmpl?.toString() ?: "—"),
+                        "km/l", m, Rtr.Green,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                TileRow { m ->
+                    StatTile("Fuel cost", if (fuel != null && perLitre != null) rupees(fuel * perLitre) else "—", "", m, Rtr.Amber)
+                    StatTile(
+                        "Cost per km",
+                        if (fuel != null && perLitre != null && s.distanceKm > 0) "₹" + String.format(Locale.US, "%.2f", fuel * perLitre / s.distanceKm) else "—",
+                        "", m,
+                    )
                 }
                 Spacer(Modifier.height(10.dp))
                 TileRow { m ->
@@ -296,7 +333,8 @@ private fun RideReport(id: String, onBack: () -> Unit) {
             item { GearBars(s.gearSeconds) }
             item {
                 Text(
-                    "Fuel is estimated from distance and the cluster's average mileage. " +
+                    "Fuel is measured from the bike's injection counter once it is calibrated (see Rides › Fuel); " +
+                        "until then it is estimated from distance and the cluster's average mileage. " +
                         "Distance comes from the odometer, or GPS when the odometer was not available.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Rtr.Muted,

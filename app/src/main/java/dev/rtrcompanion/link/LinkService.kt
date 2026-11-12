@@ -24,6 +24,7 @@ import dev.rtrcompanion.R
 import dev.rtrcompanion.data.AppState
 import dev.rtrcompanion.data.LinkPhase
 import dev.rtrcompanion.data.Prefs
+import dev.rtrcompanion.fuel.FuelMeter
 import dev.rtrcompanion.log.EventLog
 import dev.rtrcompanion.ride.RecPhase
 import dev.rtrcompanion.ride.RecState
@@ -111,7 +112,9 @@ class LinkService : Service() {
             tickJob = scope.launch {
                 while (isActive) {
                     val live = AppState.link.value.phase == LinkPhase.LIVE
-                    RideRecorder.tick(System.currentTimeMillis(), live, store)
+                    val now = System.currentTimeMillis()
+                    FuelMeter.tick(now, live)
+                    RideRecorder.tick(now, live, store)
                     val wantGps = live || RideRecorder.state.value.phase != RecPhase.IDLE
                     if (wantGps) startLocation() else stopLocation()
                     delay(1_000)

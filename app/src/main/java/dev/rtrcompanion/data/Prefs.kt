@@ -52,6 +52,37 @@ object Prefs {
         get() = sp.getInt("autoEndMinutes", 3)
         set(v) = sp.edit().putInt("autoEndMinutes", v).apply()
 
+    // ------------------------------------------------------------------ fuel
+
+    /** Tank including reserve. RTR 160 4V: 12 litres. */
+    var tankLitres: Double
+        get() = sp.getFloat("tankLitres", 12f).toDouble()
+        set(v) = sp.edit().putFloat("tankLitres", v.toFloat()).apply()
+
+    var reserveLitres: Double
+        get() = sp.getFloat("reserveLitres", 2.5f).toDouble()
+        set(v) = sp.edit().putFloat("reserveLitres", v.toFloat()).apply()
+
+    /** Bars on the cluster's fuel gauge when full. */
+    var fuelBars: Int
+        get() = sp.getInt("fuelBars", 8)
+        set(v) = sp.edit().putInt("fuelBars", v).apply()
+
+    /** Lifetime sum of the bike's fuel-injection counter, as seen by the app. */
+    var injTotal: Long
+        get() = sp.getLong("injTotal", 0L)
+        set(v) = sp.edit().putLong("injTotal", v).apply()
+
+    /** Kilometres the app has seen the odometer advance while connected. */
+    var trackedKm: Double
+        get() = sp.getLong("trackedM", 0L) / 1000.0
+        set(v) = sp.edit().putLong("trackedM", (v * 1000).toLong()).apply()
+
+    /** Steady fuel-gauge reading at the last key-off, or -1. */
+    var lastStableBars: Int
+        get() = sp.getInt("lastBars", -1)
+        set(v) = sp.edit().putInt("lastBars", v).apply()
+
     /** Show Google Maps directions on the cluster. */
     var navEnabled: Boolean
         get() = sp.getBoolean("navEnabled", true)
