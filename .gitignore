@@ -1,0 +1,23 @@
+# Build output
+build/
+.gradle/
+.kotlin/
+local.properties
+.idea/
+*.iml
+
+# APKs and app bundles — never commit the official app or our own builds
+*.apk
+*.aab
+*.xapk
+*.apks
+*.apkm
+
+# Signing material
+*.jks
+*.keystore
+key.properties
+
+# Ride logs and captures contain the bike's Bluetooth address
+captures/
+*.log
