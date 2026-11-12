@@ -164,9 +164,9 @@ class LinkService : Service() {
                     val now = System.currentTimeMillis()
                     FuelMeter.tick(now, live)
                     RideRecorder.tick(now, live, store)
-                    if (ticks % 30 == 0) refreshFuelStatus()
+                    if (ticks % 30 == 0L) refreshFuelStatus()
                     BikeMonitor.tick(now, live) { garage.addBattery(it) }
-                    if (ticks % 60 == 5) BikeWidget.updateAll(applicationContext)
+                    if (ticks % 60 == 5L) BikeWidget.updateAll(applicationContext)
                     ticks++
                     val wantGps = live || RideRecorder.state.value.phase != RecPhase.IDLE
                     if (wantGps) startLocation() else stopLocation()
