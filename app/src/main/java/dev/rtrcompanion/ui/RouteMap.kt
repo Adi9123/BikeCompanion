@@ -17,6 +17,7 @@ import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.TilesOverlay
@@ -93,6 +94,7 @@ fun RouteMap(samples: List<RideSample>, modifier: Modifier = Modifier) {
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             title = "Start"
         })
+        map.overlays.add(CopyrightOverlay(map.context))
         map.overlays.add(Marker(map).apply {
             position = track.last().first
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
