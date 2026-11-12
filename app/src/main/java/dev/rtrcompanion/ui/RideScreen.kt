@@ -42,6 +42,7 @@ import dev.rtrcompanion.data.LinkPhase
 import dev.rtrcompanion.data.Reading
 import dev.rtrcompanion.protocol.ApacheFields
 import dev.rtrcompanion.protocol.NavInstruction
+import dev.rtrcompanion.garage.RideModes
 import dev.rtrcompanion.garage.Switch
 import dev.rtrcompanion.monitor.Alert
 import dev.rtrcompanion.monitor.BikeMonitor
@@ -81,6 +82,16 @@ fun RideScreen(onOpenBike: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             StatusPill(link, Modifier.clickable { onOpenBike() })
+            readings["mode"]?.takeIf { now - it.at < STALE_MS }?.let { r ->
+                val name = RideModes.name(RideModes.mode(r.raw), RideModes.decodeNames(dev.rtrcompanion.data.Prefs.modeNames))
+                val color = when (name) {
+                    "Sport" -> Rtr.Red
+                    "Rain" -> Rtr.Blue
+                    else -> Rtr.Teal
+                }
+                Spacer(Modifier.width(8.dp))
+                Pill(name.uppercase(Locale.US) + (RideModes.topSpeed(name)?.let { " · $it max" } ?: ""), color)
+            }
             Spacer(Modifier.weight(1f))
             RecordingPill(rec)
         }
@@ -120,6 +131,12 @@ fun RideScreen(onOpenBike: () -> Unit) {
                 SwitchChip("High beam", switches[Switch.HIGH_BEAM], Rtr.Blue, Modifier.weight(1f))
                 SwitchChip("Stand", switches[Switch.SIDE_STAND], Rtr.Red, Modifier.weight(1f))
                 SwitchChip("Right ▶", switches[Switch.RIGHT], Rtr.Green, Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SwitchChip("Clutch", switches[Switch.CLUTCH], Rtr.Amber, Modifier.weight(1f))
+                SwitchChip("Brake", switches[Switch.BRAKE], Rtr.Red, Modifier.weight(1f))
+                SwitchChip("Info", switches[Switch.CALL_BUTTON], Rtr.Violet, Modifier.weight(1f))
             }
         }
 

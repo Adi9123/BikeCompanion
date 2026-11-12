@@ -56,17 +56,17 @@ object ApacheFields {
         FieldSpec(RIDE, 7, 1, "fuel", "Fuel level", "bars"),
         FieldSpec(RIDE, 8, 1, "avgSpeed", "Average speed", "km/h"),
         FieldSpec(RIDE, 9, 1, "mileage", "Mileage (raw)"),
-        FieldSpec(RIDE, 10, 1, "topSpeed", "Top speed", "km/h"),
+        FieldSpec(RIDE, 10, 1, "topSpeed", "Top speed record", "km/h"),
         FieldSpec(RIDE, 11, 1, "throttle", "Throttle", "%", Fmt.HALF),
-        FieldSpec(RIDE, 12, 1, "switches", "Switch status", "", Fmt.HEX),
-        FieldSpec(RIDE, 13, 1, "zeroTo60", "0-60 time (raw)"),
+        FieldSpec(RIDE, 12, 1, "switches", "Ignition-off 0x80 / call button", "", Fmt.HEX),
+        FieldSpec(RIDE, 13, 1, "zeroTo60", "Last 0-60 time", "s", Fmt.TENTHS),
         FieldSpec(RIDE, 14, 1, "avgMileage", "Average mileage (raw)"),
-        FieldSpec(RIDE, 15, 2, "tripF", "Trip F", "km", Fmt.TENTHS),
+        FieldSpec(RIDE, 15, 2, "tripF", "Trip F (ridden on reserve)", "km", Fmt.TENTHS),
         FieldSpec(RIDE, 17, 2, "rpm", "Engine speed", "rpm"),
 
         // 0x11 — status and diagnostics
         FieldSpec(STATUS, 3, 1, "fuelSensor", "Fuel sensor status", "", Fmt.HEX),
-        FieldSpec(STATUS, 4, 1, "state1", "Vehicle state 1", "", Fmt.HEX),
+        FieldSpec(STATUS, 4, 1, "state1", "Switches: stand 0x40, brake 0x02, clutch 0x01", "", Fmt.HEX),
         FieldSpec(STATUS, 5, 1, "service", "Service reminder", "", Fmt.HEX),
         FieldSpec(STATUS, 6, 1, "gear", "Gear", "", Fmt.GEAR),
         FieldSpec(STATUS, 7, 1, "state2", "Battery / vehicle state 2 (raw)"),
@@ -79,7 +79,7 @@ object ApacheFields {
         FieldSpec(STATUS, 15, 1, "screen", "Screen", "", Fmt.HEX),
         FieldSpec(STATUS, 16, 1, "state3", "Vehicle state 3", "", Fmt.HEX),
         FieldSpec(STATUS, 17, 1, "absMil", "ABS fault blink code"),
-        FieldSpec(STATUS, 18, 1, "mode", "Ride mode / backlight", "", Fmt.HEX),
+        FieldSpec(STATUS, 18, 1, "mode", "Ride mode (low 4 bits) / backlight (high 4 bits)", "", Fmt.HEX),
 
         // 0x12 — trip
         FieldSpec(TRIP, 3, 1, "lean", "Lean angle (raw)"),

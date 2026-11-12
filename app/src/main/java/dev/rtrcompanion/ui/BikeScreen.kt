@@ -64,6 +64,10 @@ import dev.rtrcompanion.data.Prefs
 import dev.rtrcompanion.garage.BitRef
 import dev.rtrcompanion.garage.Switch as BikeSwitch
 import dev.rtrcompanion.garage.SwitchLearn
+import dev.rtrcompanion.garage.RideModes
+import dev.rtrcompanion.monitor.InfoAction
+import dev.rtrcompanion.monitor.InfoButton
+import androidx.compose.material3.RadioButton
 import dev.rtrcompanion.link.Found
 import dev.rtrcompanion.link.LinkService
 import dev.rtrcompanion.link.Scanner
@@ -76,7 +80,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private enum class Page { MAIN, CONNECT, DISPLAY_TESTS, LEARN, DIAGNOSTICS, ADVANCED }
+private enum class Page { MAIN, CONNECT, DISPLAY_TESTS, LEARN, DIAGNOSTICS, ADVANCED, INFO }
 
 /** The More tab: settings in sections, and the tools as separate pages. */
 @Composable
@@ -89,6 +93,7 @@ fun MoreScreen(permissionsGranted: Boolean, onRequestPermissions: () -> Unit) {
         Page.DISPLAY_TESTS -> SubPage("Cluster display tests", { page = Page.MAIN }) { DisplayTestsPage() }
         Page.LEARN -> SubPage("Learn bike switches", { page = Page.MAIN }) { LearnSwitchesPage() }
         Page.ADVANCED -> SubPage("Advanced", { page = Page.MAIN }) { AdvancedPage() }
+        Page.INFO -> SubPage("Info switch & ride modes", { page = Page.MAIN }) { InfoSwitchPage { page = Page.LEARN } }
         Page.DIAGNOSTICS -> Column(Modifier.fillMaxSize()) {
             PageHeader("Diagnostics & log") { page = Page.MAIN }
             DiagnosticsScreen()
@@ -319,7 +324,9 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
         // ------------------------------------------------------- tools
         SectionTitle("Tools")
         Panel(Modifier.fillMaxWidth()) {
-            NavRow("Learn bike switches", "Teach the app your indicators, high beam and side stand") { open(Page.LEARN) }
+            NavRow("Info switch & ride modes", "Choose what short, double and long presses do") { open(Page.INFO) }
+            Divider()
+            NavRow("Learn bike switches", "Teach the app your indicators, high beam and Info switch") { open(Page.LEARN) }
             Divider()
             NavRow("Diagnostics & log", "Every frame from the bike, connection health, session log") { open(Page.DIAGNOSTICS) }
             Divider()
@@ -334,6 +341,132 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
             color = Rtr.Muted,
         )
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+// ---------------------------------------------------------------- info switch
+
+@Composable
+private fun InfoSwitchPage(openLearn: () -> Unit) {
+    val learned = remember { SwitchLearn.decode(Prefs.switchMap).containsKey(BikeSwitch.CALL_BUTTON) }
+    if (!learned) {
+        Panel(Modifier.fillMaxWidth()) {
+            Text("Teach the app your Info switch first", fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "The bike reports the switch as one bit in its data. Run the switch learner once with the bike on, " +
+                    "and hold the Info switch when it asks.",
+                style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = openLearn) { Text("Learn switches") }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+
+    SectionTitle("What each press does")
+    Panel(Modifier.fillMaxWidth()) {
+        var short by remember { mutableStateOf(Prefs.infoShort) }
+        var double by remember { mutableStateOf(Prefs.infoDouble) }
+        var long by remember { mutableStateOf(Prefs.infoLong) }
+        ActionRow("Short press", short) { short = it; Prefs.infoShort = it }
+        Divider()
+        ActionRow("Double press", double) { double = it; Prefs.infoDouble = it }
+        Divider()
+        ActionRow("Long press (1.5 s)", long) { long = it; Prefs.infoLong = it }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "The cluster still does its own job too (it cancels calls and clears messages). " +
+                "Answers like range or fuel appear on the cluster's text line.",
+            style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+        )
+    }
+
+    SectionTitle("Smart overrides")
+    Panel(Modifier.fillMaxWidth()) {
+        var decline by remember { mutableStateOf(Prefs.infoDeclinesCalls) }
+        ToggleRow("Short press declines a ringing call", "Works with any dialer that shows a Decline button.", decline) {
+            decline = it; Prefs.infoDeclinesCalls = it
+        }
+        Divider()
+        var pump by remember { mutableStateOf(Prefs.infoPumpOnReserve) }
+        ToggleRow("Long press finds a petrol pump on reserve", "Sends a notification that opens Maps near you.", pump) {
+            pump = it; Prefs.infoPumpOnReserve = it
+        }
+        Divider()
+        var onCluster by remember { mutableStateOf(Prefs.alertsOnCluster) }
+        ToggleRow("Show alerts on the cluster", "FUEL LOW, SIDE STAND DOWN, HIGH ENGINE TEMP and others.", onCluster) {
+            onCluster = it; Prefs.alertsOnCluster = it
+        }
+    }
+
+    SectionTitle("Ride modes")
+    Panel(Modifier.fillMaxWidth()) {
+        val readings by AppState.readings.collectAsState()
+        val current = readings["mode"]?.raw?.let { RideModes.mode(it) }
+        var names by remember { mutableStateOf(RideModes.decodeNames(Prefs.modeNames)) }
+        Text(
+            "Urban and Rain are limited to 103 km/h, Sport to 114 km/h (owner's manual). " +
+                "Switch modes with the Mode button while stopped.",
+            style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+        )
+        Spacer(Modifier.height(8.dp))
+        if (current == null) {
+            Text("Connect to the bike to see the current mode.", color = Rtr.Muted)
+        } else {
+            Text("The bike reports mode $current. Which mode does the cluster show?", fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("Urban", "Sport", "Rain").forEach { n ->
+                    FilterChip(
+                        selected = RideModes.name(current, names) == n && names.containsKey(current),
+                        onClick = {
+                            names = names + (current to n)
+                            Prefs.modeNames = RideModes.encodeNames(names)
+                        },
+                        label = { Text(n) },
+                    )
+                }
+            }
+        }
+        if (names.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Confirmed: " + names.entries.sortedBy { it.key }.joinToString { "${it.key} = ${it.value}" },
+                style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+            )
+            TextButton(onClick = { names = emptyMap(); Prefs.modeNames = "" }) { Text("Reset") }
+        }
+    }
+}
+
+@Composable
+private fun ActionRow(title: String, selected: String, onSelect: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val action = InfoButton.action(selected)
+    NavRow(title, action.label + " · " + action.detail) { open = true }
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(title) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    InfoAction.entries.filter { it != InfoAction.DECLINE_CALL }.forEach { a ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onSelect(a.name); open = false }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = a == action, onClick = { onSelect(a.name); open = false })
+                            Column(Modifier.padding(start = 8.dp)) {
+                                Text(a.label, fontWeight = FontWeight.SemiBold)
+                                Text(a.detail, style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { open = false }) { Text("Close") } },
+        )
     }
 }
 
@@ -482,7 +615,7 @@ private fun LearnSwitchesPage() {
     var baseline by remember { mutableStateOf<Map<BitRef, Double>>(emptyMap()) }
     var found by remember { mutableStateOf(SwitchLearn.decode(Prefs.switchMap)) }
     var lastResult by remember { mutableStateOf("") }
-    val switches = BikeSwitch.entries
+    val switches = BikeSwitch.entries.filter { it.learnable }
 
     LaunchedEffect(capturing) {
         if (!capturing) return@LaunchedEffect

@@ -53,6 +53,33 @@ class GarageStore(ctx: Context) {
         version.value++
     }
 
+    // ------------------------------------------------------------ saved spots
+
+    private val spotsFile = File(dir, "spots.csv")
+
+    /** Places saved with the Info switch: time, latitude, longitude. */
+    @Synchronized
+    fun spots(): List<Triple<Long, Double, Double>> = read(spotsFile).lineSequence().mapNotNull { line ->
+        val c = line.split(',')
+        val t = c.getOrNull(0)?.toLongOrNull() ?: return@mapNotNull null
+        val la = c.getOrNull(1)?.toDoubleOrNull() ?: return@mapNotNull null
+        val lo = c.getOrNull(2)?.toDoubleOrNull() ?: return@mapNotNull null
+        Triple(t, la, lo)
+    }.toList()
+
+    @Synchronized
+    fun addSpot(t: Long, lat: Double, lon: Double) {
+        val lines = (spots() + Triple(t, lat, lon)).takeLast(500).map { "${it.first},${it.second},${it.third}" }
+        spotsFile.writeText(lines.joinToString(separator = "\n"))
+        version.value++
+    }
+
+    @Synchronized
+    fun clearSpots() {
+        spotsFile.delete()
+        version.value++
+    }
+
     companion object {
         val version = MutableStateFlow(0)
     }

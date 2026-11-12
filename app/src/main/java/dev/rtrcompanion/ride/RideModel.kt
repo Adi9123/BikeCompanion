@@ -26,6 +26,8 @@ data class RideSample(
     val lon: Double? = null,
     /** The app's lifetime fuel-injection counter total at this moment. */
     val inj: Long? = null,
+    /** Ride-mode number from the cluster (see RideModes). */
+    val mode: Int? = null,
 )
 
 data class RideSummary(
@@ -64,6 +66,8 @@ data class RideSummary(
     val avgThrottle: Int = 0,
     /** 0..100, higher is smoother. */
     val smoothness: Int = 0,
+    /** Seconds spent moving in each ride mode, by the cluster's mode number. */
+    val modeSeconds: Map<Int, Long> = emptyMap(),
 )
 
 object RideStats {
@@ -110,12 +114,14 @@ object RideStats {
         var moving = 0L
         var idle = 0L
         val gears = HashMap<Int, Long>()
+        val modes = HashMap<Int, Long>()
         for (i in 1 until samples.size) {
             val dt = ((samples[i].t - samples[i - 1].t) / 1000).coerceIn(0, 5)
             val sp = samples[i].speed ?: 0
             if (sp > 0) {
                 moving += dt
                 samples[i].gear?.let { g -> gears[g] = (gears[g] ?: 0L) + dt }
+                samples[i].mode?.let { m -> modes[m] = (modes[m] ?: 0L) + dt }
             } else {
                 idle += dt
             }
@@ -171,6 +177,7 @@ object RideStats {
             warmupS = warm,
             avgThrottle = if (throttles.isEmpty()) 0 else throttles.average().roundToInt(),
             smoothness = smooth,
+            modeSeconds = modes,
         )
     }
 }
@@ -180,13 +187,13 @@ object RideStats {
  * with one row per second. Plain text so a ride can be opened in a spreadsheet.
  */
 object RideCsv {
-    const val HEADER = "t,speed,rpm,gear,engineTemp,battery,throttle,odo,lat,lon,inj"
+    const val HEADER = "t,speed,rpm,gear,engineTemp,battery,throttle,odo,lat,lon,inj,mode"
 
     fun write(summary: RideSummary, samples: List<RideSample>): String = buildString {
         for ((k, v) in metaOf(summary)) append('#').append(k).append('=').append(v).append('\n')
         append(HEADER).append('\n')
         for (s in samples) {
-            val cells = listOf(s.t, s.speed, s.rpm, s.gear, s.engineTemp, s.battery, s.throttle, s.odo, s.lat, s.lon, s.inj)
+            val cells = listOf(s.t, s.speed, s.rpm, s.gear, s.engineTemp, s.battery, s.throttle, s.odo, s.lat, s.lon, s.inj, s.mode)
             append(cells.joinToString(",") { it?.toString() ?: "" }).append('\n')
         }
     }
@@ -224,6 +231,7 @@ object RideCsv {
             lat = c[8].toDoubleOrNull(),
             lon = c[9].toDoubleOrNull(),
             inj = c.getOrNull(10)?.toLongOrNull(),
+            mode = c.getOrNull(11)?.toIntOrNull(),
         )
     }
 
@@ -255,6 +263,7 @@ object RideCsv {
         "warmupS" to (s.warmupS?.toString() ?: ""),
         "avgThrottle" to s.avgThrottle.toString(),
         "smoothness" to s.smoothness.toString(),
+        "modes" to s.modeSeconds.entries.sortedBy { it.key }.joinToString(";") { "${it.key}:${it.value}" },
     )
 
     fun summaryOf(m: Map<String, String>): RideSummary = RideSummary(
@@ -289,7 +298,15 @@ object RideCsv {
         warmupS = m["warmupS"]?.toLongOrNull(),
         avgThrottle = m["avgThrottle"]?.toIntOrNull() ?: 0,
         smoothness = m["smoothness"]?.toIntOrNull() ?: 0,
+        modeSeconds = pairs(m["modes"]),
     )
+
+    private fun pairs(s: String?): Map<Int, Long> = (s ?: "").split(';').mapNotNull { part ->
+        val kv = part.split(':')
+        val k = kv.getOrNull(0)?.toIntOrNull()
+        val v = kv.getOrNull(1)?.toLongOrNull()
+        if (k != null && v != null) k to v else null
+    }.toMap()
 }
 
 /** GPX 1.1 track, readable by Google Earth, Strava, OsmAnd and most map tools. */

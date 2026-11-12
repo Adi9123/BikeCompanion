@@ -19,11 +19,25 @@ data class BitRef(val frame: Int, val position: Int, val bit: Int) {
     }
 }
 
-enum class Switch(val label: String, val instruction: String) {
-    LEFT("Left indicator", "Switch the LEFT indicator on and leave it blinking."),
-    RIGHT("Right indicator", "Switch the RIGHT indicator on and leave it blinking."),
-    HIGH_BEAM("High beam", "Switch the HIGH BEAM on."),
-    SIDE_STAND("Side stand", "Put the SIDE STAND down."),
+/**
+ * Lamps, switches and buttons the app can show. [builtin] is the bit the
+ * official app's own decoding uses for this cluster family, so it works
+ * without learning; [learnable] ones are taught with the wizard (a learned
+ * bit overrides a built-in one).
+ */
+enum class Switch(
+    val label: String,
+    val instruction: String,
+    val learnable: Boolean,
+    val builtin: Pair<BitRef, Boolean>? = null,
+) {
+    LEFT("Left indicator", "Switch the LEFT indicator on and leave it blinking.", true),
+    RIGHT("Right indicator", "Switch the RIGHT indicator on and leave it blinking.", true),
+    HIGH_BEAM("High beam", "Switch the HIGH BEAM on.", true),
+    CALL_BUTTON("Call button", "Press and HOLD the call button until the capture finishes.", true),
+    SIDE_STAND("Side stand", "Put the SIDE STAND down.", false, BitRef(0x11, 4, 6) to true),
+    CLUTCH("Clutch", "Pull the CLUTCH lever in.", false, BitRef(0x11, 4, 0) to true),
+    BRAKE("Brake", "Hold the BRAKE.", false, BitRef(0x11, 4, 1) to true),
 }
 
 /**
@@ -61,6 +75,14 @@ object SwitchLearn {
         return if (kotlin.math.abs(bestDiff) >= 0.3) r to (bestDiff > 0) else null
     }
 
+    /** Built-in bits, with anything the rider has learned taking priority. */
+    fun effective(learned: Map<Switch, Pair<BitRef, Boolean>>): Map<Switch, Pair<BitRef, Boolean>> {
+        val out = LinkedHashMap<Switch, Pair<BitRef, Boolean>>()
+        for (sw in Switch.entries) sw.builtin?.let { out[sw] = it }
+        out.putAll(learned)
+        return out
+    }
+
     /** "LEFT=17:13:5:1;..." where the last field is 1 when the bit is set while active. */
     fun encode(map: Map<Switch, Pair<BitRef, Boolean>>): String =
         map.entries.joinToString(";") { (k, v) -> "${k.name}=${v.first.encode()}:${if (v.second) 1 else 0}" }
@@ -74,6 +96,48 @@ object SwitchLearn {
         val ref = BitRef.decode(f.take(3).joinToString(":")) ?: return@mapNotNull null
         sw to (ref to (f[3] == "1"))
     }.toMap()
+}
+
+// ---------------------------------------------------------------- ride modes
+
+/**
+ * Ride mode from `5A 11` byte 18: the low four bits are the mode, the high four
+ * the backlight level in tens of percent. The official app folds codes 9-12
+ * into mode 3. Which number is Sport, Urban or Rain is not in the official
+ * app for this bike, so the rider names each one once.
+ */
+object RideModes {
+    val NAMES = listOf("Sport", "Urban", "Rain")
+
+    fun mode(byte18: Long): Int {
+        val m = (byte18 and 0x0F).toInt()
+        return if (m in 9..12) 3 else m
+    }
+
+    fun backlightPercent(byte18: Long): Int = ((byte18 shr 4) and 0x0F).toInt() * 10
+
+    fun decodeNames(s: String): Map<Int, String> = s.split(';').mapNotNull { part ->
+        val eq = part.indexOf('=')
+        val k = if (eq > 0) part.substring(0, eq).toIntOrNull() else null
+        if (k != null) k to part.substring(eq + 1) else null
+    }.toMap()
+
+    fun encodeNames(m: Map<Int, String>): String = m.entries.sortedBy { it.key }.joinToString(";") { "${it.key}=${it.value}" }
+
+    /**
+     * Assumed until the rider confirms: the manual cycles Urban, Sport, Rain,
+     * and the bike falls back to Urban on a fault.
+     */
+    val ASSUMED = mapOf(1 to "Urban", 2 to "Sport", 3 to "Rain")
+
+    /** Top speed per mode, from the owner's manual. */
+    fun topSpeed(name: String): Int? = when (name) {
+        "Sport" -> 114
+        "Urban", "Rain" -> 103
+        else -> null
+    }
+
+    fun name(mode: Int, confirmed: Map<Int, String>): String = confirmed[mode] ?: ASSUMED[mode] ?: "Mode $mode"
 }
 
 // ------------------------------------------------------------- maintenance
@@ -94,15 +158,18 @@ data class DueInfo(val status: Due, val kmLeft: Double?, val daysLeft: Long?)
 data class ServiceEntry(val t: Long, val odo: Double?, val title: String, val cost: Double?)
 
 object Maintenance {
+    /** Intervals from the RTR 160 4V owner's manual maintenance schedule (after the free services). */
     val defaults = listOf(
-        MaintItem("oil", "Engine oil", 3000, 180, null, null),
-        MaintItem("service", "General service", 5000, 180, null, null),
-        MaintItem("chainLube", "Chain lube", 500, null, null, null),
-        MaintItem("chainAdjust", "Chain tension", 1000, null, null, null),
-        MaintItem("airFilter", "Air filter", 10000, null, null, null),
-        MaintItem("sparkPlug", "Spark plug", 10000, null, null, null),
-        MaintItem("brakes", "Brake pads check", 5000, null, null, null),
-        MaintItem("tyres", "Tyre pressure", null, 14, null, null),
+        MaintItem("service", "Periodic service (check and top up oil)", 3000, 90, null, null),
+        MaintItem("oil", "Engine oil change (1.2 l 10W30)", 6000, 180, null, null),
+        MaintItem("chainLube", "Chain clean and lube", 500, null, null, null),
+        MaintItem("chainAdjust", "Chain tension check", 1000, null, null, null),
+        MaintItem("tyres", "Tyre pressure (F 25 / R 28 psi / 32 with pillion)", null, 14, null, null),
+        MaintItem("sparkPlug", "Spark plug (UR4KE)", 12000, 365, null, null),
+        MaintItem("airFilter", "Air filter", 12000, null, null, null),
+        MaintItem("forkOil", "Front fork oil", 18000, null, null, null),
+        MaintItem("brakeFluid", "Brake fluid (DOT 3/4)", 21000, 730, null, null),
+        MaintItem("clutch", "Clutch plates check", 21000, null, null, null),
     )
 
     private const val DAY_MS = 86_400_000L

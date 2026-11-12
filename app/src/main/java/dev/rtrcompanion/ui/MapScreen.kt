@@ -200,6 +200,16 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
                 centred = true
             }
         }
+        // Spots saved with the Info switch.
+        val fmt = SimpleDateFormat("d MMM, h:mm a", Locale.getDefault())
+        dev.rtrcompanion.garage.GarageStore(ctx).spots().takeLast(50).forEach { (t, la, lo) ->
+            map.overlays.add(Marker(map).apply {
+                position = GeoPoint(la, lo)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                title = "Saved spot"
+                snippet = fmt.format(Date(t))
+            })
+        }
         map.overlays.add(track)
         map.overlays.add(meMarker)
         // OpenStreetMap's licence requires this credit on the map.

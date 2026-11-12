@@ -30,6 +30,11 @@ import dev.rtrcompanion.fuel.FuelStore
 import dev.rtrcompanion.garage.GarageStore
 import dev.rtrcompanion.monitor.Alert
 import dev.rtrcompanion.monitor.BikeMonitor
+import dev.rtrcompanion.monitor.InfoAction
+import dev.rtrcompanion.monitor.InfoButton
+import android.media.AudioManager
+import android.net.Uri
+import android.view.KeyEvent
 import dev.rtrcompanion.ui.BikeWidget
 import dev.rtrcompanion.log.EventLog
 import dev.rtrcompanion.ride.RecPhase
@@ -76,6 +81,88 @@ class LinkService : Service() {
         garage = GarageStore(applicationContext)
         fuelStore = FuelStore(applicationContext)
         BikeMonitor.notifier = { postAlert(it) }
+        InfoButton.isRinging = { AppState.ringingCall.value != null }
+        InfoButton.onReserve = { BikeMonitor.fuelStatus?.onReserve == true }
+        InfoButton.perform = { action, _ -> performInfo(action) }
+    }
+
+    /** What the handlebar Info switch was set to do. */
+    private fun performInfo(a: InfoAction) {
+        fun say(text: String) {
+            AppState.clusterTexts.tryEmit(text)
+        }
+        when (a) {
+            InfoAction.NONE -> Unit
+            InfoAction.SHOW_RANGE -> {
+                refreshFuelStatus()
+                say(BikeMonitor.fuelStatus?.rangeKm?.let { "RANGE ${it.toInt()} KM" } ?: "RANGE UNKNOWN")
+            }
+            InfoAction.SHOW_FUEL -> {
+                refreshFuelStatus()
+                say(BikeMonitor.fuelStatus?.litresLeft?.let { "FUEL ABOUT ${Math.round(it)} L" } ?: "FUEL UNKNOWN")
+            }
+            InfoAction.SHOW_RIDE -> {
+                val r = RideRecorder.state.value
+                val start = r.startedAt
+                if (r.phase == RecPhase.IDLE || start == null) {
+                    say("NO RIDE YET")
+                } else {
+                    say("RIDE ${r.distanceKm.toInt()} KM ${(System.currentTimeMillis() - start) / 60_000} MIN")
+                }
+            }
+            InfoAction.SHOW_TIME -> say("TIME " + java.text.SimpleDateFormat("h mm a", Locale.US).format(java.util.Date()))
+            InfoAction.SAVE_SPOT -> {
+                val fix = RideRecorder.lastFix()
+                if (fix != null) {
+                    garage.addSpot(System.currentTimeMillis(), fix.first, fix.second)
+                    say("SPOT SAVED")
+                } else {
+                    say("NO GPS FIX")
+                }
+            }
+            InfoAction.NEXT_TRACK -> mediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
+            InfoAction.PREVIOUS_TRACK -> mediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+            InfoAction.PLAY_PAUSE -> mediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            InfoAction.PETROL_PUMP -> {
+                postPumpNotification()
+                say("PUMP ON PHONE")
+            }
+            InfoAction.TOGGLE_DIRECTIONS -> {
+                Prefs.navEnabled = !Prefs.navEnabled
+                say(if (Prefs.navEnabled) "DIRECTIONS ON" else "DIRECTIONS OFF")
+            }
+            InfoAction.DECLINE_CALL -> AppState.declineCall.tryEmit(Unit)
+        }
+    }
+
+    private fun mediaKey(code: Int) {
+        val am = getSystemService(AudioManager::class.java) ?: return
+        am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+        am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+    }
+
+    /** Android does not let a background app open Maps by itself, so offer it as a notification. */
+    private fun postPumpNotification() {
+        try {
+            val nm = getSystemService(NotificationManager::class.java) ?: return
+            if (nm.getNotificationChannel(ALERT_CHANNEL) == null) {
+                nm.createNotificationChannel(NotificationChannel(ALERT_CHANNEL, "Bike alerts", NotificationManager.IMPORTANCE_HIGH))
+            }
+            val maps = PendingIntent.getActivity(
+                this, 7, Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=petrol+pump")),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            val n = NotificationCompat.Builder(this, ALERT_CHANNEL)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Nearest petrol pump")
+                .setContentText("Tap to see petrol pumps near you in Maps.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(maps)
+                .build()
+            nm.notify(ALERT_BASE + 250, n)
+        } catch (ignored: Exception) {
+        }
     }
 
     private lateinit var garage: GarageStore

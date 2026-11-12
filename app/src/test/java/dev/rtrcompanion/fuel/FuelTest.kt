@@ -64,13 +64,24 @@ class FuelTest {
 
     @Test
     fun statusFallsBackToGauge() {
+        // Manual: 4 bars is about 6.5 litres.
         val st = FuelMath.status(emptyList(), 12.0, 2.5, 8, bars = 4, injNow = 0, clusterMileage = 40)
-        assertEquals(6.0, st.litresLeft!!, 0.001)
+        assertEquals(6.5, st.litresLeft!!, 0.001)
         assertFalse(st.measured)
-        assertEquals(240.0, st.rangeKm!!, 0.001)
+        assertEquals(260.0, st.rangeKm!!, 0.001)
         assertFalse(st.onReserve)
-        assertTrue(FuelMath.status(emptyList(), 12.0, 2.5, 8, bars = 1, injNow = 0, clusterMileage = 40).onReserve)
+        assertFalse(FuelMath.status(emptyList(), 12.0, 2.5, 8, bars = 1, injNow = 0, clusterMileage = 40).onReserve)
+        assertTrue(FuelMath.status(emptyList(), 12.0, 2.5, 8, bars = 0, injNow = 0, clusterMileage = 40).onReserve)
         assertNull(FuelMath.status(emptyList(), 12.0, 2.5, 8, bars = null, injNow = 0, clusterMileage = null).litresLeft)
+    }
+
+    @Test
+    fun gaugeCurveFromManual() {
+        assertEquals(3.5, FuelMath.litresFromBars(1, 8, 12.0), 0.001)
+        assertEquals(6.5, FuelMath.litresFromBars(4, 8, 12.0), 0.001)
+        assertEquals(11.2, FuelMath.litresFromBars(8, 8, 12.0), 0.001)
+        assertEquals(2.0, FuelMath.litresFromBars(0, 8, 12.0), 0.001)
+        assertEquals(6.0, FuelMath.litresFromBars(4, 10, 15.0), 0.001)   // other gauges: linear
     }
 
     @Test

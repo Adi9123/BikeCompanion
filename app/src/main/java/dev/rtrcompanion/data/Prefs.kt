@@ -80,6 +80,11 @@ object Prefs {
         get() = sp.getBoolean("textReversed", true)
         set(v) = sp.edit().putBoolean("textReversed", v).apply()
 
+    /** Also show alerts such as FUEL LOW on the cluster's message line. */
+    var alertsOnCluster: Boolean
+        get() = sp.getBoolean("alertsOnCluster", true)
+        set(v) = sp.edit().putBoolean("alertsOnCluster", v).apply()
+
     /** Phone notifications for overheating, charging problems, faults, reserve. */
     var alertsOn: Boolean
         get() = sp.getBoolean("alertsOn", true)
@@ -96,6 +101,34 @@ object Prefs {
     var parked: String
         get() = sp.getString("parked", "") ?: ""
         set(v) = sp.edit().putString("parked", v).apply()
+
+    /** Rider's names for the bike's ride-mode numbers, e.g. "1=Urban;2=Sport". */
+    var modeNames: String
+        get() = sp.getString("modeNames", "") ?: ""
+        set(v) = sp.edit().putString("modeNames", v).apply()
+
+    /** Info switch actions by press type; names of InfoAction. */
+    var infoShort: String
+        get() = sp.getString("infoShort", "NONE") ?: "NONE"
+        set(v) = sp.edit().putString("infoShort", v).apply()
+
+    var infoDouble: String
+        get() = sp.getString("infoDouble", "SHOW_RANGE") ?: "SHOW_RANGE"
+        set(v) = sp.edit().putString("infoDouble", v).apply()
+
+    var infoLong: String
+        get() = sp.getString("infoLong", "SAVE_SPOT") ?: "SAVE_SPOT"
+        set(v) = sp.edit().putString("infoLong", v).apply()
+
+    /** While the phone rings, a short press declines the call. */
+    var infoDeclinesCalls: Boolean
+        get() = sp.getBoolean("infoDeclines", true)
+        set(v) = sp.edit().putBoolean("infoDeclines", v).apply()
+
+    /** On fuel reserve, a long press finds the nearest petrol pump. */
+    var infoPumpOnReserve: Boolean
+        get() = sp.getBoolean("infoPump", true)
+        set(v) = sp.edit().putBoolean("infoPump", v).apply()
 
     /** Learned switch bits, see SwitchLearn. */
     var switchMap: String

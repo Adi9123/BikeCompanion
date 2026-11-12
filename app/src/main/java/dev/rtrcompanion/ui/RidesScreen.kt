@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import dev.rtrcompanion.fuel.FuelMath
+import dev.rtrcompanion.garage.RideModes
+import androidx.compose.foundation.background
 import dev.rtrcompanion.ride.RecPhase
 import dev.rtrcompanion.ride.RideRecorder
 import dev.rtrcompanion.ride.RideSample
@@ -325,6 +327,7 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                 )
             }
             item { GearBars(s.gearSeconds) }
+            if (s.modeSeconds.isNotEmpty()) item { ModeBars(s.modeSeconds) }
             item {
                 Text(
                     "Fuel is measured from the bike's injection counter once it is calibrated (see Rides › Fuel); " +
@@ -334,6 +337,34 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                     color = Rtr.Muted,
                 )
                 Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModeBars(modeSeconds: Map<Int, Long>) {
+    val names = RideModes.decodeNames(dev.rtrcompanion.data.Prefs.modeNames)
+    val total = modeSeconds.values.sum().coerceAtLeast(1L)
+    Panel(Modifier.fillMaxWidth()) {
+        Text("Time in each ride mode", fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(10.dp))
+        modeSeconds.entries.sortedByDescending { it.value }.forEach { (mode, secs) ->
+            val name = RideModes.name(mode, names)
+            val color = when (name) {
+                "Sport" -> Rtr.Red
+                "Rain" -> Rtr.Blue
+                else -> Rtr.Teal
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+                Text(name, modifier = Modifier.width(64.dp), fontWeight = FontWeight.SemiBold)
+                Box(Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(6.dp)).background(Rtr.Panel2)) {
+                    Box(
+                        Modifier.fillMaxWidth(secs.toFloat() / total).height(12.dp)
+                            .clip(RoundedCornerShape(6.dp)).background(color),
+                    )
+                }
+                Text(duration(secs), style = MaterialTheme.typography.bodySmall, color = Rtr.Muted, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }

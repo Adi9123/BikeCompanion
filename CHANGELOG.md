@@ -3,6 +3,24 @@
 All notable changes to RTR Companion. Versions follow
 [semantic versioning](https://semver.org/); dates are release dates.
 
+## [0.7.0] - 2026-11-13
+
+- **Your own Info switch.** Pick what a short, double and long press of the
+  handlebar Info switch does: show range, fuel, ride so far or time on the
+  cluster, save the spot, next / previous song, play / pause, nearest petrol
+  pump, or directions on/off. Short press declines a ringing call and long
+  press finds a pump while on reserve (both can be turned off).
+- **Ride modes** (Urban / Sport / Rain): live pill on the Ride screen with the
+  mode's top speed from the owner's manual, time in each mode in ride reports,
+  and a way to confirm which number the bike uses for each mode.
+- **Clutch, brake and Info switch** indicators on the Ride screen.
+- **Saved spots** appear as markers on the Map.
+- **Alerts on the cluster**: FUEL LOW, SIDE STAND DOWN, HIGH ENGINE TEMP,
+  CHARGING LOW, BREAK TIME.
+- Service schedule, tyre pressures and fuel gauge curve now follow the owner's
+  manual (service 3,000 km, oil 6,000 km, chain lube 500 km, and so on).
+- Switch learner only asks for switches the app cannot already read.
+
 ## [0.6.0] - 2026-11-13
 
 - **Release page**: release notes, install steps, versioned APK and SHA-256

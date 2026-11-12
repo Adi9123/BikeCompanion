@@ -17,6 +17,7 @@ import dev.rtrcompanion.data.AppState
 import dev.rtrcompanion.data.LinkPhase
 import dev.rtrcompanion.data.Prefs
 import dev.rtrcompanion.log.EventLog
+import dev.rtrcompanion.monitor.InfoButton
 import dev.rtrcompanion.protocol.Codec
 import dev.rtrcompanion.protocol.FrameDecoder
 import dev.rtrcompanion.protocol.Gatt
@@ -402,6 +403,7 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
         }
         val now = System.currentTimeMillis()
         AppState.onInbound(inb, now)
+        if (inb.usable) InfoButton.onFrame(inb.id, inb.clear, now)
         val learned = inb.scramble
         if (inb.checksumOk && !inb.forced && learned != null && Prefs.lastScheme != learned.name) {
             Prefs.lastScheme = learned.name

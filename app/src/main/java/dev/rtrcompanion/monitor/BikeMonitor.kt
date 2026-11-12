@@ -15,7 +15,8 @@ import java.util.Locale
 
 enum class Severity { INFO, WARN, DANGER }
 
-data class Alert(val id: String, val title: String, val detail: String, val severity: Severity)
+/** [cluster] is a short line for the bike's message display, or null. */
+data class Alert(val id: String, val title: String, val detail: String, val severity: Severity, val cluster: String? = null)
 
 /**
  * Watches the bike's live values once a second (driven by the link service):
@@ -39,6 +40,9 @@ object BikeMonitor {
 
     @Volatile
     var fuelStatus: FuelStatus? = null
+
+    private var movingSince = 0L
+    private var stoppedSince = 0L
 
     private val notifiedAt = HashMap<String, Long>()
     private val lastOn = HashMap<Switch, Long>()
@@ -84,12 +88,12 @@ object BikeMonitor {
 
         val list = ArrayList<Alert>()
         if (engineTemp != null && engineTemp >= 110) {
-            list += Alert("hot", "Engine running hot", "$engineTemp °C. Let it cool before riding hard.", Severity.DANGER)
+            list += Alert("hot", "Engine running hot", "$engineTemp °C. Let it cool before riding hard.", Severity.DANGER, "HIGH ENGINE TEMP")
         }
         if (rpm != null && rpm > 3000 && battery != null && battery < 13.0f) {
             if (lowChargeSince == 0L) lowChargeSince = now
             if (now - lowChargeSince > 30_000) {
-                list += Alert("charge", "Battery not charging", String.format(Locale.US, "%.1f V at %d rpm (normal 13.5–14.8 V).", battery, rpm), Severity.WARN)
+                list += Alert("charge", "Battery not charging", String.format(Locale.US, "%.1f V at %d rpm (normal 13.5–14.8 V).", battery, rpm), Severity.WARN, "CHARGING LOW")
             }
         } else {
             lowChargeSince = 0L
@@ -100,14 +104,18 @@ object BikeMonitor {
         fresh("mil")?.takeIf { it > 0 }?.let { list += Alert("mil", "Engine fault code $it", "The engine warning light is reporting code $it.", Severity.DANGER) }
         fresh("absMil")?.takeIf { it > 0 }?.let { list += Alert("abs", "ABS fault code $it", "The ABS is reporting code $it.", Severity.DANGER) }
         fuelStatus?.takeIf { it.onReserve }?.let { f ->
-            list += Alert("reserve", "Fuel on reserve", f.rangeKm?.let { "About ${it.toInt()} km left." } ?: "Refuel soon.", Severity.WARN)
+            list += Alert(
+                "reserve", "Fuel on reserve",
+                (f.rangeKm?.let { "About ${it.toInt()} km left. " } ?: "") + "Hold the Info switch to find a petrol pump.",
+                Severity.WARN, "FUEL LOW",
+            )
         }
         if (Prefs.overspeedOn && speed != null && speed > Prefs.overspeedKmh) {
             list += Alert("speed", "Over ${Prefs.overspeedKmh} km/h", "Speed $speed km/h.", Severity.WARN)
         }
         val sw = _switches.value
         if (sw[Switch.SIDE_STAND] == true && (speed ?: 0) > 5) {
-            list += Alert("stand", "Side stand is down", "Lift the side stand.", Severity.DANGER)
+            list += Alert("stand", "Side stand is down", "Lift the side stand.", Severity.DANGER, "SIDE STAND DOWN")
         }
         for (ind in listOf(Switch.LEFT, Switch.RIGHT)) {
             if (sw[ind] == true && (speed ?: 0) > 20) {
@@ -116,6 +124,18 @@ object BikeMonitor {
             } else {
                 indicatorSince.remove(ind)
             }
+        }
+
+        // Break reminder after two hours of riding without a 10-minute stop.
+        if ((speed ?: 0) > 0) {
+            if (movingSince == 0L) movingSince = now
+            stoppedSince = 0L
+        } else if (movingSince != 0L) {
+            if (stoppedSince == 0L) stoppedSince = now
+            if (now - stoppedSince > 10 * 60_000L) movingSince = 0L
+        }
+        if (movingSince != 0L && now - movingSince > 2 * 3600_000L) {
+            list += Alert("break", "Time for a break", "You have been riding for over two hours.", Severity.INFO, "BREAK TIME")
         }
 
         _alerts.value = list
@@ -128,6 +148,7 @@ object BikeMonitor {
                     notifiedAt[a.id] = now
                     EventLog.w(TAG, "Alert: ${a.title} — ${a.detail}")
                     notifier?.invoke(a)
+                    if (Prefs.alertsOnCluster) a.cluster?.let { AppState.clusterTexts.tryEmit(it) }
                 }
             }
         }
@@ -153,9 +174,9 @@ object BikeMonitor {
 
     private fun updateSwitches(now: Long) {
         val text = Prefs.switchMap
-        if (text != mapText) {
+        if (text != mapText || map.isEmpty()) {
             mapText = text
-            map = SwitchLearn.decode(text)
+            map = SwitchLearn.effective(SwitchLearn.decode(text))
         }
         if (map.isEmpty()) {
             if (_switches.value.isNotEmpty()) _switches.value = emptyMap()

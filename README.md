@@ -43,11 +43,11 @@ Google Maps directions on your bike's cluster. No account, no cloud.
 
 | Tab | What you get |
 | :--- | :--- |
-| **Ride** | Animated speedometer with RPM arc and gear; trips A, B and F; mileage; engine and intake temperature; battery voltage; throttle; fuel left and range; live alerts; indicator, high-beam and side-stand status |
-| **Map** | Live map that follows you, the ride being recorded, where you parked, and "Navigate to bike" |
-| **Rides** | Every ride recorded automatically. Reports with distance, times, average and top speed, fuel used and cost, RPM, temperatures, battery, route coloured by speed, graphs, gear usage and a riding-style score. CSV and GPX export |
+| **Ride** | Animated speedometer with RPM arc and gear; trips A, B and F; mileage; engine and intake temperature; battery voltage; throttle; fuel left and range; live alerts; ride mode with its top speed; indicator, high-beam, side-stand, clutch, brake and Info switch status |
+| **Map** | Live map that follows you, the ride being recorded, where you parked, spots saved with the Info switch, and "Navigate to bike" |
+| **Rides** | Every ride recorded automatically. Reports with distance, times, average and top speed, fuel used and cost, RPM, temperatures, battery, route coloured by speed, graphs, gear and ride-mode usage and a riding-style score. CSV and GPX export |
 | **Garage** | **Fuel**: refuel log, real mileage per tank, cost per km, fuel left and range. **Service**: reminders by km and days, service history with costs. **Battery**: health from resting, starting and charging voltage. **Stats**: week, month, all-time, records |
-| **More** | Connection, cluster display options, alerts, recording, backup and restore, switch learning, diagnostics |
+| **More** | Connection, Info switch actions, ride-mode names, cluster display options, alerts, recording, backup and restore, switch learning, diagnostics |
 
 **On the bike's cluster:** Google Maps turn-by-turn (arrow, distance,
 instruction), caller name and missed-call count, WhatsApp and SMS sender,
@@ -56,6 +56,13 @@ song title, overspeed warning, rider-name greeting.
 **Alerts:** engine overheating, battery not charging or overcharging, engine
 and ABS fault codes, reserve fuel, side stand down while moving, indicator
 left on.
+
+**Info switch, your way:** choose what a short, double and long press of
+the handlebar Info switch does: range, fuel, ride so far or time on the
+cluster; save the spot; next / previous song or play / pause; nearest petrol
+pump; directions on/off. During a call a short press declines it, and on
+reserve a long press finds a pump. Teach the app the switch once under
+**More → Learn bike switches**.
 
 **Also:** key-off detection with a "Ride ended?" prompt, home-screen widget,
 backup and restore of all records.

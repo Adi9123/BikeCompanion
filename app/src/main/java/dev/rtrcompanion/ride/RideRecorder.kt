@@ -2,6 +2,7 @@ package dev.rtrcompanion.ride
 
 import dev.rtrcompanion.data.AppState
 import dev.rtrcompanion.data.Prefs
+import dev.rtrcompanion.garage.RideModes
 import dev.rtrcompanion.log.EventLog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -112,6 +113,7 @@ object RideRecorder {
             lat = if (fix) lat else null,
             lon = if (fix) lon else null,
             inj = Prefs.injTotal,
+            mode = fresh("mode")?.let { RideModes.mode(it) },
         )
         samples += smp
         val s = _state.value

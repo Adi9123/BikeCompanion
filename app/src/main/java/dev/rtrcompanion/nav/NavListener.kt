@@ -7,6 +7,11 @@ import dev.rtrcompanion.data.AppState
 import dev.rtrcompanion.data.Prefs
 import dev.rtrcompanion.log.EventLog
 import dev.rtrcompanion.protocol.NavParser
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Reads Google Maps' turn-by-turn notification and publishes each step to
@@ -21,10 +26,16 @@ class NavListener : NotificationListenerService() {
     private var activeKey: String? = null
     private var lastLogged: String? = null
 
+    private var scope: CoroutineScope? = null
+
     override fun onListenerConnected() {
         Prefs.init(this)
         EventLog.init(this)
         AppState.navAccess.value = true
+        scope?.cancel()
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main).also { sc ->
+            sc.launch { AppState.declineCall.collect { declineRinging() } }
+        }
         EventLog.i(TAG, "Notification access active")
         try {
             activeNotifications?.forEach { if (it.packageName in MAPS) handle(it) }
@@ -35,6 +46,33 @@ class NavListener : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         AppState.navAccess.value = false
+        scope?.cancel()
+        scope = null
+    }
+
+    /** Presses the "Decline" button on the ringing call's notification. */
+    private fun declineRinging() {
+        val key = AppState.ringingCall.value ?: return
+        val sbn = try {
+            activeNotifications?.firstOrNull { it.key == key }
+        } catch (e: Exception) {
+            null
+        } ?: return
+        val words = listOf("decline", "reject", "dismiss", "hang up", "end call")
+        val action = sbn.notification.actions?.firstOrNull { a ->
+            val t = a.title?.toString()?.lowercase() ?: ""
+            words.any { t.contains(it) }
+        }
+        if (action == null) {
+            EventLog.w(TAG, "No decline button on the call notification")
+            return
+        }
+        try {
+            action.actionIntent.send()
+            EventLog.i(TAG, "Call declined from the Info switch")
+        } catch (e: Exception) {
+            EventLog.w(TAG, "Could not decline: $e")
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -42,6 +80,7 @@ class NavListener : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        if (sbn.key == AppState.ringingCall.value) AppState.ringingCall.value = null
         if (isMissedCall(sbn)) countMissedCalls()
         if (sbn.packageName in MAPS && sbn.key == activeKey) {
             activeKey = null
@@ -126,6 +165,7 @@ class NavListener : NotificationListenerService() {
             Prefs.callAlerts && n.category == Notification.CATEGORY_CALL &&
                 (text(n).contains("incoming", true) || title(n).contains("incoming", true)) -> {
                 val who = title(n).takeUnless { it.contains("incoming", true) } ?: text(n)
+                AppState.ringingCall.value = sbn.key
                 once(sbn.key, "CALL $who")
             }
             Prefs.messageAlerts && pkg in WHATSAPP -> {

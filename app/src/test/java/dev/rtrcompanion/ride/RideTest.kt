@@ -25,6 +25,7 @@ class RideTest {
                 odo = 1000.0 + if (moving) (i - 120) * (4.0 / 480) else 0.0,
                 lat = 12.9 + i * 0.0001,
                 lon = 77.6,
+                mode = if (i < 400) 1 else 2,
             )
         }
         return out
@@ -69,6 +70,14 @@ class RideTest {
     fun noFuelWithoutMileage() {
         assertNull(RideStats.compute("r", ride(), mileageKmpl = null).fuelL)
         assertNull(RideStats.compute("r", ride(), mileageKmpl = 0).fuelL)
+    }
+
+    @Test
+    fun timeInEachRideMode() {
+        val s = RideStats.compute("r", ride(), mileageKmpl = 40)
+        assertEquals(setOf(1, 2), s.modeSeconds.keys)
+        assertEquals(s.gearSeconds.values.sum(), s.modeSeconds.values.sum())
+        assertTrue(s.modeSeconds.getValue(1) > s.modeSeconds.getValue(2) / 2)
     }
 
     @Test

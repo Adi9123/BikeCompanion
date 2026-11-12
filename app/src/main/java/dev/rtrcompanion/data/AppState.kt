@@ -73,6 +73,12 @@ object AppState {
     /** Text waiting to be shown on the cluster's message line (calls, messages, music, tests). */
     val clusterTexts = MutableSharedFlow<String>(extraBufferCapacity = 8)
 
+    /** Key of the incoming-call notification while the phone is ringing, else null. */
+    val ringingCall = MutableStateFlow<String?>(null)
+
+    /** Requests to decline the ringing call (from the bike's Info switch). */
+    val declineCall = MutableSharedFlow<Unit>(extraBufferCapacity = 2)
+
     /** Missed calls currently in the notification shade; sent in the phone-status frame. */
     val missedCalls = MutableStateFlow(0)
 

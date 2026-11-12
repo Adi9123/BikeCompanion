@@ -98,9 +98,21 @@ object FuelMath {
         return if (counts > 0) litres / counts else null
     }
 
-    /** Rough litres from the gauge: each bar is an equal share of the tank. */
-    fun litresFromBars(bars: Int, totalBars: Int, tankLitres: Double): Double =
-        bars.coerceIn(0, totalBars).toDouble() / totalBars * tankLitres
+    /**
+     * Litres from the gauge. For the RTR 160 4V's 8-bar gauge the owner's
+     * manual gives the points: 1 bar ≈ 3.5 l, 4 bars ≈ 6.5 l, 8 bars above
+     * 10.4 l, and no bars below the 2.5 l reserve. That is about 1 litre per
+     * bar above the reserve. Other gauges are treated as linear.
+     */
+    fun litresFromBars(bars: Int, totalBars: Int, tankLitres: Double): Double {
+        val b = bars.coerceIn(0, totalBars)
+        if (totalBars != 8) return b.toDouble() / totalBars * tankLitres
+        return when (b) {
+            0 -> 2.0
+            8 -> (10.4 + tankLitres) / 2
+            else -> 2.5 + b
+        }
+    }
 
     /**
      * Litres left from the counter: a full tank at the last full fill, minus
