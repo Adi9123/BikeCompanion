@@ -170,6 +170,8 @@ fun BikeScreen(permissionsGranted: Boolean, onRequestPermissions: () -> Unit) {
 
         NavigationSection()
 
+        RecordingSection(onRequestPermissions)
+
         SectionTitle("Rider name on the cluster")
         var name by remember { mutableStateOf(Prefs.riderName) }
         OutlinedTextField(
@@ -195,6 +197,37 @@ fun BikeScreen(permissionsGranted: Boolean, onRequestPermissions: () -> Unit) {
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun RecordingSection(onRequestPermissions: () -> Unit) {
+    val ctx = LocalContext.current
+    SectionTitle("Ride recording")
+    Text(
+        "Rides are recorded automatically while the bike is connected and saved when the key is switched off.",
+        style = MaterialTheme.typography.bodySmall,
+    )
+    if (!Perms.locationGranted(ctx)) {
+        Spacer(Modifier.height(8.dp))
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+            Column(Modifier.padding(12.dp)) {
+                Text("Allow location to record the route on the map.")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onRequestPermissions) { Text("Allow location") }
+            }
+        }
+    }
+    var minutes by remember { mutableStateOf(Prefs.autoEndMinutes) }
+    Text("Save automatically after key-off:", modifier = Modifier.padding(top = 8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(2, 3, 5, 10).forEach { m ->
+            FilterChip(
+                selected = minutes == m,
+                onClick = { minutes = m; Prefs.autoEndMinutes = m },
+                label = { Text("$m min") },
+            )
+        }
     }
 }
 

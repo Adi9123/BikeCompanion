@@ -13,10 +13,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,6 +40,18 @@ import java.util.Locale
 
 @Composable
 fun DiagnosticsScreen() {
+    var sub by rememberSaveable { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = sub, containerColor = Rtr.Bg, contentColor = Rtr.Text) {
+            Tab(selected = sub == 0, onClick = { sub = 0 }, text = { Text("Live data") })
+            Tab(selected = sub == 1, onClick = { sub = 1 }, text = { Text("Log") })
+        }
+        if (sub == 0) FramesPane() else LogScreen()
+    }
+}
+
+@Composable
+private fun FramesPane() {
     val link by AppState.link.collectAsState()
     val dec by AppState.decoder.collectAsState()
     val frames by AppState.frames.collectAsState()

@@ -45,15 +45,17 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle :app:testDebugUnitTest :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Assert no INTERNET permission
+      # Internet is allowed only for OpenStreetMap tiles. Fail if any other
+      # network-related permission appears through a dependency.
+      - name: Check permissions
         run: |
           set -e
           files=$(find app/build/intermediates -path '*merged_manifest*' -name AndroidManifest.xml)
           [ -n "$files" ] || { echo "merged manifest not found"; exit 1; }
-          if grep -l 'android.permission.INTERNET' $files; then
-            echo "INTERNET permission found in the merged manifest"; exit 1
+          grep -ho 'android.permission.[A-Z_]*' $files | sort -u
+          if grep -lE 'READ_CONTACTS|READ_SMS|RECORD_AUDIO|CAMERA|ACCESS_BACKGROUND_LOCATION' $files; then
+            echo "Unexpected permission in the merged manifest"; exit 1
           fi
-          echo "OK: no INTERNET permission"
 
       - name: Rename APK
         run: |

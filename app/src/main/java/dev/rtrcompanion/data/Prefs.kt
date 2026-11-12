@@ -47,6 +47,11 @@ object Prefs {
         get() = sp.getString("riderName", "") ?: ""
         set(v) = sp.edit().putString("riderName", v).apply()
 
+    /** Minutes after key-off before a paused ride is saved automatically. */
+    var autoEndMinutes: Int
+        get() = sp.getInt("autoEndMinutes", 3)
+        set(v) = sp.edit().putInt("autoEndMinutes", v).apply()
+
     /** Show Google Maps directions on the cluster. */
     var navEnabled: Boolean
         get() = sp.getBoolean("navEnabled", true)

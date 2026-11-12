@@ -1,22 +1,26 @@
 package dev.rtrcompanion.ui
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,7 +42,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Prefs.init(this)
         EventLog.init(this)
-        enableEdgeToEdge()
+        MapSetup.init(this)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
         setContent {
             RtrTheme { AppRoot() }
         }
@@ -49,17 +57,22 @@ private data class Tab(val label: String, val icon: ImageVector)
 
 private val tabs = listOf(
     Tab("Ride", Icons.Filled.Home),
+    Tab("Rides", Icons.AutoMirrored.Filled.List),
     Tab("Diagnostics", Icons.Filled.Build),
-    Tab("Log", Icons.Filled.Menu),
     Tab("Bike", Icons.Filled.Settings),
 )
+
+private const val TAB_RIDE = 0
+private const val TAB_RIDES = 1
+private const val TAB_BIKE = 3
 
 @Composable
 fun AppRoot() {
     val ctx = LocalContext.current
     var granted by remember { mutableStateOf(Perms.bluetoothGranted(ctx)) }
     // Start on the Bike tab until a bike has been chosen.
-    var tab by rememberSaveable { mutableIntStateOf(if (Prefs.lastAddress == null) 3 else 0) }
+    var tab by rememberSaveable { mutableIntStateOf(if (Prefs.lastAddress == null) TAB_BIKE else TAB_RIDE) }
+    var openRide by rememberSaveable { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -69,28 +82,49 @@ fun AppRoot() {
     }
 
     LaunchedEffect(Unit) {
-        if (!granted) launcher.launch(Perms.all())
+        if (!Perms.allGranted(ctx)) launcher.launch(Perms.all())
     }
 
+    RideDialogs(onViewRide = { id ->
+        openRide = id
+        tab = TAB_RIDES
+    })
+
     Scaffold(
+        containerColor = Rtr.Bg,
         bottomBar = {
-            NavigationBar {
+            NavigationBar(containerColor = Rtr.Panel) {
                 tabs.forEachIndexed { i, t ->
                     NavigationBarItem(
                         selected = tab == i,
-                        onClick = { tab = i },
+                        onClick = {
+                            if (tab == i && i == TAB_RIDES) openRide = null
+                            tab = i
+                        },
                         icon = { Icon(t.icon, contentDescription = t.label) },
                         label = { Text(t.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Rtr.Text,
+                            selectedTextColor = Rtr.Text,
+                            indicatorColor = Rtr.RedDeep,
+                            unselectedIconColor = Rtr.Muted,
+                            unselectedTextColor = Rtr.Muted,
+                        ),
                     )
                 }
             }
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Rtr.Bg)
+                .padding(padding),
+        ) {
             when (tab) {
-                0 -> RideScreen()
-                1 -> DiagnosticsScreen()
-                2 -> LogScreen()
+                TAB_RIDE -> RideScreen(onOpenBike = { tab = TAB_BIKE })
+                TAB_RIDES -> RidesScreen(openRide) { openRide = it }
+                2 -> DiagnosticsScreen()
                 else -> BikeScreen(
                     permissionsGranted = granted,
                     onRequestPermissions = { launcher.launch(Perms.all()) },

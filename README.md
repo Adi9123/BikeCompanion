@@ -16,15 +16,17 @@ installing a new one.
 ## About
 
 It talks to the cluster directly over Bluetooth Low Energy. There is no
-account, no cloud and no internet permission; the build fails if one sneaks in.
+account and no cloud. Internet is used only to download OpenStreetMap tiles for
+the ride map; ride data, logs and bike data never leave the phone unless you
+share them.
 
 ## What it does
 
 | Screen | |
 | :--- | :--- |
-| **Ride** | Speed, RPM, gear, odometer, engine temperature, battery voltage, fuel, trip, range, throttle, fault codes |
-| **Diagnostics** | Connection health (state, signal, drops and their reasons), decoding status, and every frame the bike sends as a byte grid with changing bytes highlighted |
-| **Log** | Every frame in and out with timestamps, shareable as a file |
+| **Ride** | Speedometer with RPM arc and gear, trips A/B/F, mileage, engine and intake temperature, battery, throttle, fuel, live recording status |
+| **Rides** | Every ride recorded automatically; report with distance, times, average and top speed, estimated fuel, RPM, temperatures, battery, route on a map coloured by speed, graphs, gear usage, CSV/GPX export |
+| **Diagnostics** | Live data and the log. Connection health (state, signal, drops and their reasons), decoding status, and every frame the bike sends as a byte grid with changing bytes highlighted |
 | **Navigation** | Google Maps turn-by-turn on the cluster: arrow, distance, instruction text |
 | **Bike** | Scan, connect, auto-reconnect, settings, rider name, navigation test and arrow-code tester |
 
@@ -73,6 +75,15 @@ Keep `rtr.jks` safe and out of the repository.
    "Bike's scramble" should show a detected scheme.
 5. Compare the **Ride** screen with the cluster: speed, odometer, gear, RPM.
 6. **Log** → Share log file, so the session can be analysed.
+
+## Ride recording
+
+While the bike is connected (screen off is fine), the app records one sample a
+second: speed, RPM, gear, temperatures, battery, throttle, odometer and GPS.
+Recording starts the first time the bike moves. When the key is switched off
+the ride pauses and the app asks **Ride ended? Save / Keep riding / Discard**;
+with no answer it saves after the time set on the Bike tab (3 minutes by
+default). Switching the key back on within that time continues the same ride.
 
 ## Navigation
 
