@@ -20,10 +20,14 @@ import dev.rtrcompanion.log.EventLog
 import dev.rtrcompanion.protocol.Codec
 import dev.rtrcompanion.protocol.FrameDecoder
 import dev.rtrcompanion.protocol.Gatt
+import dev.rtrcompanion.protocol.NavFrames
+import dev.rtrcompanion.protocol.NavInstruction
 import dev.rtrcompanion.protocol.Outbound
 import dev.rtrcompanion.protocol.Scramble
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -67,6 +71,26 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
     private var reconnectJob: Job? = null
     private var watchdogJob: Job? = null
     private var rssiJob: Job? = null
+    private var writerJob: Job? = null
+    private var navJob: Job? = null
+
+    /** One frame waiting to be written, in the clear. */
+    private class Out(val clear: ByteArray, val what: String)
+
+    /**
+     * Everything sent to the cluster goes through this queue and a single
+     * writer, so two frames are never written at once (the radio rejects the
+     * second). A new queue is made for each connection.
+     */
+    @Volatile
+    private var queue = Channel<Out>(16, BufferOverflow.DROP_OLDEST)
+
+    @Volatile
+    private var navActive = false
+
+    private fun enqueue(clear: ByteArray, what: String) {
+        queue.trySend(Out(clear, what))
+    }
 
     // ---------------------------------------------------------------- control
 
@@ -191,9 +215,14 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
         keepaliveJob?.cancel()
         watchdogJob?.cancel()
         rssiJob?.cancel()
+        writerJob?.cancel()
+        navJob?.cancel()
+        queue.close()
         keepaliveJob = null
         watchdogJob = null
         rssiJob = null
+        writerJob = null
+        navJob = null
     }
 
     private fun goLive() {
@@ -210,43 +239,87 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
                 deviceName = g.device.name ?: it.deviceName,
             )
         }
-        EventLog.i(TAG, "Live. Keepalive ${if (Prefs.keepalive) "on" else "off"}")
+        EventLog.i(TAG, "Live. Keepalive ${if (Prefs.keepalive) "on" else "off"}, navigation ${if (Prefs.navEnabled) "on" else "off"}")
         if (Prefs.riderName.isNotBlank()) riderNamePending = true
+        queue = Channel(16, BufferOverflow.DROP_OLDEST)
+        navActive = false
+        startWriter()
         startKeepalive()
+        startNav()
         startRssi()
     }
 
     // ------------------------------------------------------------- outbound
 
+    private fun startWriter() {
+        writerJob?.cancel()
+        val q = queue
+        writerJob = scope.launch {
+            for (o in q) {
+                val scheme = outboundScheme() ?: continue
+                send(o.clear, scheme, o.what)
+                delay(WRITE_GAP_MS)
+            }
+        }
+    }
+
     private fun startKeepalive() {
         keepaliveJob?.cancel()
         keepaliveJob = scope.launch {
+            var tick = 0
             while (isActive) {
-                val scheme = outboundScheme()
-                if (scheme != null) {
-                    if (Prefs.keepalive) {
-                        send(Outbound.keepalive(PhoneInfo.status(ctx)), scheme, "keepalive")
-                    }
+                if (outboundScheme() != null) {
+                    if (Prefs.keepalive) enqueue(Outbound.keepalive(PhoneInfo.status(ctx)), "keepalive")
                     if (riderNamePending && Prefs.riderName.isNotBlank()) {
-                        delay(400)
                         riderNamePending = false
-                        send(Outbound.riderName(Prefs.riderName), scheme, "rider name")
+                        enqueue(Outbound.riderName(Prefs.riderName), "rider name")
                     }
+                    // Repeat the current direction every 4 s so the cluster keeps showing it.
+                    val nav = AppState.nav.value
+                    if (tick % 2 == 1 && nav != null && Prefs.navEnabled) enqueueNav(nav)
                 }
+                tick++
                 delay(KEEPALIVE_MS)
             }
         }
     }
 
+    /** Sends a direction to the cluster as soon as Google Maps (or a test) changes it. */
+    private fun startNav() {
+        navJob?.cancel()
+        navJob = scope.launch {
+            AppState.nav.collect { nav ->
+                if (!Prefs.navEnabled) return@collect
+                if (nav == null) {
+                    if (navActive) {
+                        navActive = false
+                        enqueue(Outbound.navEnd(), "nav end")
+                        EventLog.i(TAG, "Navigation ended; cleared the cluster")
+                    }
+                } else {
+                    enqueueNav(nav)
+                }
+            }
+        }
+    }
+
+    private fun enqueueNav(nav: NavInstruction) {
+        navActive = true
+        val (control, text) = NavFrames.build(nav)
+        enqueue(control, "nav ${nav.maneuver.name} ${nav.distanceToTurnM ?: "?"}m")
+        enqueue(text, "nav text")
+    }
+
     /**
      * Which scramble to apply to outgoing frames. In automatic mode this is
-     * whatever the bike was found to use. If the bike has sent nothing valid
-     * after a few seconds, fall back to the Apache default, in case the
-     * cluster waits for the phone to speak first.
+     * whatever the bike was found to use, or what it used last time. With
+     * neither, fall back to the most common Apache scheme after a few seconds,
+     * in case the cluster waits for the phone to speak first.
      */
     private fun outboundScheme(): Scramble? {
         Prefs.scheme(Prefs.outboundScheme)?.let { return it }
         decoder.locked?.let { return it }
+        Prefs.scheme(Prefs.lastScheme)?.let { return it }
         return if (System.currentTimeMillis() - liveSince > FALLBACK_MS) Scramble.XOR_EA else null
     }
 
@@ -299,6 +372,12 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
     // -------------------------------------------------------------- inbound
 
     private fun handle(bytes: ByteArray) {
+        if (bytes.all { it.toInt() == 0 }) {
+            // The cluster sends all-zero frames while it wakes up. Count them, don't decode them.
+            AppState.decoder.update { it.copy(idleFrames = it.idleFrames + 1) }
+            if (AppState.decoder.value.idleFrames == 1L) EventLog.i(TAG, "Cluster is sending empty frames (still waking up)")
+            return
+        }
         decoder.forced = Prefs.scheme(Prefs.inboundScheme)
         val inb = decoder.decode(bytes)
         if (inb == null) {
@@ -307,6 +386,11 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
         }
         val now = System.currentTimeMillis()
         AppState.onInbound(inb, now)
+        val learned = inb.scramble
+        if (inb.checksumOk && !inb.forced && learned != null && Prefs.lastScheme != learned.name) {
+            Prefs.lastScheme = learned.name
+            EventLog.i(TAG, "This bike uses ${learned.label}; remembered for next time")
+        }
         val verdict = when {
             inb.checksumOk -> "ok"
             inb.forced -> "checksum BAD (forced)"
@@ -427,5 +511,6 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
         private const val CONNECT_TIMEOUT_MS = 20_000L
         private const val KEEPALIVE_MS = 2_000L
         private const val FALLBACK_MS = 5_000L
+        private const val WRITE_GAP_MS = 120L
     }
 }

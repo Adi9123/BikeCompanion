@@ -43,6 +43,9 @@ import dev.rtrcompanion.data.Prefs
 import dev.rtrcompanion.link.Found
 import dev.rtrcompanion.link.LinkService
 import dev.rtrcompanion.link.Scanner
+import androidx.core.app.NotificationManagerCompat
+import dev.rtrcompanion.protocol.Maneuver
+import dev.rtrcompanion.protocol.NavInstruction
 import dev.rtrcompanion.protocol.Outbound
 import dev.rtrcompanion.protocol.Scramble
 
@@ -165,6 +168,8 @@ fun BikeScreen(permissionsGranted: Boolean, onRequestPermissions: () -> Unit) {
             style = MaterialTheme.typography.bodySmall,
         )
 
+        NavigationSection()
+
         SectionTitle("Rider name on the cluster")
         var name by remember { mutableStateOf(Prefs.riderName) }
         OutlinedTextField(
@@ -185,13 +190,88 @@ fun BikeScreen(permissionsGranted: Boolean, onRequestPermissions: () -> Unit) {
 
         SectionTitle("What this app sends")
         Text(
-            "Only the phone-status frame and the rider name. It never sends calibration, ride-mode or " +
-                "vehicle-setting commands, and it has no internet access.",
+            "Only the phone-status frame, the rider name and navigation directions. It never sends " +
+                "calibration, ride-mode or vehicle-setting commands, and it has no internet access.",
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(24.dp))
     }
 }
+
+@Composable
+private fun NavigationSection() {
+    val ctx = LocalContext.current
+    val listenerConnected by AppState.navAccess.collectAsState()
+    val nav by AppState.nav.collectAsState()
+    val granted = listenerConnected ||
+        NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
+
+    SectionTitle("Google Maps directions on the cluster")
+    if (!granted) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+            Column(Modifier.padding(12.dp)) {
+                Text("Allow notification access so the app can read Google Maps' turn-by-turn notification.")
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = {
+                    ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }) { Text("Open notification access") }
+            }
+        }
+    } else {
+        Text("Notification access: granted", style = MaterialTheme.typography.bodySmall)
+    }
+
+    var enabled by remember { mutableStateOf(Prefs.navEnabled) }
+    ToggleRow(
+        "Show directions on the cluster",
+        "Start navigation in Google Maps; the arrow, distance and instruction appear on the bike.",
+        enabled,
+    ) { enabled = it; Prefs.navEnabled = it }
+
+    Text(
+        "Now: " + (nav?.let { "${it.maneuver.label}, ${it.distanceToTurnM ?: "?"} m (${it.source})" } ?: "not navigating"),
+        style = MaterialTheme.typography.bodySmall,
+    )
+
+    Text("Test without riding (bike connected):", modifier = Modifier.padding(top = 8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedButton(onClick = { AppState.nav.value = testStep(Maneuver.LEFT, 300, "Turn left") }) { Text("Left") }
+        OutlinedButton(onClick = { AppState.nav.value = testStep(Maneuver.RIGHT, 40, "Turn right") }) { Text("Right") }
+        OutlinedButton(onClick = { AppState.nav.value = testStep(Maneuver.UTURN_RIGHT, 150, "Make a U turn") }) { Text("U-turn") }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedButton(onClick = { AppState.nav.value = testStep(Maneuver.STRAIGHT, 2500, "Continue straight") }) { Text("Straight") }
+        OutlinedButton(onClick = { AppState.nav.value = testStep(Maneuver.ARRIVE, 0, "Arrived", remaining = 20) }) { Text("Arrive") }
+        OutlinedButton(onClick = { AppState.nav.value = null }) { Text("Stop") }
+    }
+
+    var code by remember { mutableStateOf("0") }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedTextField(
+            value = code,
+            onValueChange = { v -> code = v.filter { it.isDigit() }.take(3) },
+            label = { Text("Arrow code") },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        OutlinedButton(onClick = {
+            val n = (code.toIntOrNull() ?: 0).coerceIn(0, 255)
+            AppState.nav.value = testStep(Maneuver.UNKNOWN, 200, "Code $n", icon = n)
+        }) { Text("Send") }
+        OutlinedButton(onClick = {
+            val n = ((code.toIntOrNull() ?: 0) + 1).coerceIn(0, 255)
+            code = n.toString()
+            AppState.nav.value = testStep(Maneuver.UNKNOWN, 200, "Code $n", icon = n)
+        }) { Text("Next") }
+    }
+    Text(
+        "The arrow code tester shows which picture the cluster draws for each code, so wrong arrows can be fixed.",
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
+
+private fun testStep(m: Maneuver, dist: Int, text: String, remaining: Int = 5400, icon: Int? = null) =
+    NavInstruction(m, dist, remaining, 12, text, source = "Test", iconOverride = icon)
 
 @Composable
 private fun DeviceRow(f: Found, onClick: () -> Unit) {

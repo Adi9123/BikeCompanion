@@ -80,4 +80,75 @@ object Outbound {
     }
 
     fun riderName(name: String): ByteArray = text(ID_RIDER_NAME, name)
+
+    // ------------------------------------------------------------ navigation
+
+    const val ID_NAV_CONTROL = 0x4E
+    const val ID_NAV_TEXT = 0x4F
+
+    /** The checksum takes byte 19, so a navigation text line holds 16 characters. */
+    const val NAV_TEXT_MAX = 16
+
+    /**
+     * Navigation control frame: `5A 4E`, distance to the turn (2 bytes, m),
+     * time left (2 bytes, min), distance left (3 bytes, m), arrow code, number
+     * of text lines, status, unit, alert, prompt, 3 reserved, checksum, FF.
+     */
+    fun navControl(
+        distanceM: Int,
+        remainingMin: Int,
+        remainingM: Int,
+        picto: Int,
+        strings: Int,
+        status: Int,
+        alert: Int,
+        prefix: Int,
+    ): ByteArray {
+        val f = ByteArray(Codec.FRAME_SIZE)
+        f[0] = Codec.START_IN.toByte()
+        f[1] = ID_NAV_CONTROL.toByte()
+        val d = distanceM.coerceIn(0, 0xFFFF)
+        f[2] = (d shr 8).toByte()
+        f[3] = d.toByte()
+        val t = remainingMin.coerceIn(0, 0xFFFF)
+        f[4] = (t shr 8).toByte()
+        f[5] = t.toByte()
+        val r = remainingM.coerceIn(0, 0xFFFFFF)
+        f[6] = (r shr 16).toByte()
+        f[7] = (r shr 8).toByte()
+        f[8] = r.toByte()
+        f[9] = picto.toByte()
+        f[10] = strings.toByte()
+        f[11] = status.toByte()
+        f[12] = 0
+        f[13] = alert.toByte()
+        f[14] = prefix.toByte()
+        return Codec.withChecksum(f)
+    }
+
+    /** Characters the cluster can show; anything else becomes a space. */
+    fun navSanitize(text: String): String =
+        text.map { c -> if (c in 'A'..'Z' || c in 'a'..'z' || c in '0'..'9' || c == ' ') c else ' ' }
+            .joinToString("")
+            .replace(Regex(" +"), " ")
+            .trim()
+            .take(NAV_TEXT_MAX)
+            .trim()
+
+    /** `5B 4F` + up to 16 characters, zero padding, checksum, FF. */
+    fun navText(text: String): ByteArray {
+        val f = ByteArray(Codec.FRAME_SIZE)
+        f[0] = Codec.START_OUT.toByte()
+        f[1] = ID_NAV_TEXT.toByte()
+        navSanitize(text).toByteArray(Charsets.US_ASCII).copyInto(f, destinationOffset = 2)
+        return Codec.withChecksum(f)
+    }
+
+    /** All-zero control frame: tells the cluster navigation has ended. */
+    fun navEnd(): ByteArray {
+        val f = ByteArray(Codec.FRAME_SIZE)
+        f[0] = Codec.START_IN.toByte()
+        f[1] = ID_NAV_CONTROL.toByte()
+        return Codec.withChecksum(f)
+    }
 }

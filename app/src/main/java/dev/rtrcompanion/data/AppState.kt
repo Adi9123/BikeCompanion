@@ -2,6 +2,7 @@ package dev.rtrcompanion.data
 
 import dev.rtrcompanion.protocol.ApacheFields
 import dev.rtrcompanion.protocol.Inbound
+import dev.rtrcompanion.protocol.NavInstruction
 import dev.rtrcompanion.protocol.Scramble
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
@@ -48,6 +49,8 @@ data class DecoderStatus(
     val passes: Map<Scramble, Long> = emptyMap(),
     val noScheme: Long = 0,
     val total: Long = 0,
+    /** All-zero frames the cluster sends while it is still waking up. */
+    val idleFrames: Long = 0,
     val txCount: Long = 0,
     val txRejected: Long = 0,
     val lastTx: String? = null,
@@ -62,6 +65,12 @@ object AppState {
     val readings = MutableStateFlow<Map<String, Reading>>(emptyMap())
     val frames = MutableStateFlow<Map<Int, FrameStat>>(emptyMap())
     val decoder = MutableStateFlow(DecoderStatus())
+
+    /** Current navigation step from Google Maps (or a test), null when not navigating. */
+    val nav = MutableStateFlow<NavInstruction?>(null)
+
+    /** Whether the notification listener is connected, i.e. notification access is granted. */
+    val navAccess = MutableStateFlow(false)
 
     fun resetSession() {
         readings.value = emptyMap()

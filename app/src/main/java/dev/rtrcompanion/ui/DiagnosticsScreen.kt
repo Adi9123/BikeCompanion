@@ -99,6 +99,7 @@ private fun DecoderCard(d: DecoderStatus) {
                 KeyValue("  checksum valid as ${s.name}", "${d.passes[s] ?: 0} / ${d.total}")
             }
             KeyValue("  valid under none", "${d.noScheme} / ${d.total}")
+            KeyValue("Empty wake-up frames", d.idleFrames.toString())
             KeyValue("Sent to bike", "${d.txCount} frames (${d.txRejected} rejected)")
             KeyValue("Sending with", d.outbound?.name ?: "—")
             KeyValue("Last sent", d.lastTx ?: "—")

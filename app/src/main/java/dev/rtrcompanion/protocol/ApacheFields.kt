@@ -2,7 +2,7 @@ package dev.rtrcompanion.protocol
 
 import java.util.Locale
 
-enum class Fmt { INT, TENTHS, TEMP_OFFSET_25, GEAR, HEX }
+enum class Fmt { INT, TENTHS, HALF, TEMP_OFFSET_25, GEAR, HEX }
 
 /**
  * Where one value lives inside a cluster frame.
@@ -37,6 +37,7 @@ object ApacheFields {
     const val TRIP = 0x12
     const val LAP = 0x16
     const val ENGINE = 0x18
+    const val TRIPS = 0x19
 
     val frameNames: Map<Int, String> = mapOf(
         RIDE to "Ride",
@@ -44,6 +45,7 @@ object ApacheFields {
         TRIP to "Trip",
         LAP to "Lap timer",
         ENGINE to "Engine",
+        TRIPS to "Trips",
         0x29 to "Basic data",
     )
 
@@ -51,15 +53,15 @@ object ApacheFields {
         // 0x10 — ride
         FieldSpec(RIDE, 3, 1, "speed", "Speed", "km/h"),
         FieldSpec(RIDE, 4, 3, "odometer", "Odometer", "km", Fmt.TENTHS),
-        FieldSpec(RIDE, 7, 1, "fuel", "Fuel level (raw)"),
+        FieldSpec(RIDE, 7, 1, "fuel", "Fuel level (bars?)"),
         FieldSpec(RIDE, 8, 1, "avgSpeed", "Average speed", "km/h"),
-        FieldSpec(RIDE, 9, 1, "mileage", "Mileage", "km/l"),
+        FieldSpec(RIDE, 9, 1, "mileage", "Mileage (raw)"),
         FieldSpec(RIDE, 10, 1, "topSpeed", "Top speed", "km/h"),
-        FieldSpec(RIDE, 11, 1, "throttle", "Throttle", "%"),
+        FieldSpec(RIDE, 11, 1, "throttle", "Throttle", "%", Fmt.HALF),
         FieldSpec(RIDE, 12, 1, "switches", "Switch status", "", Fmt.HEX),
         FieldSpec(RIDE, 13, 1, "zeroTo60", "0-60 time (raw)"),
-        FieldSpec(RIDE, 14, 1, "avgMileage", "Average mileage", "km/l"),
-        FieldSpec(RIDE, 15, 2, "tripF", "Trip F (raw)"),
+        FieldSpec(RIDE, 14, 1, "avgMileage", "Average mileage (raw)"),
+        FieldSpec(RIDE, 15, 2, "tripF", "Trip F", "km", Fmt.TENTHS),
         FieldSpec(RIDE, 17, 2, "rpm", "Engine speed", "rpm"),
 
         // 0x11 — status and diagnostics
@@ -73,7 +75,7 @@ object ApacheFields {
         FieldSpec(STATUS, 10, 1, "modelCode", "Vehicle model code", "", Fmt.HEX),
         FieldSpec(STATUS, 11, 1, "diag", "Diagnostic flags", "", Fmt.HEX),
         FieldSpec(STATUS, 13, 1, "indicators", "Turn indicators", "", Fmt.HEX),
-        FieldSpec(STATUS, 14, 1, "engineTemp", "Engine temperature", "°C", Fmt.TEMP_OFFSET_25),
+        FieldSpec(STATUS, 14, 1, "telltales", "Warning lamps (raw bits)", "", Fmt.HEX),
         FieldSpec(STATUS, 15, 1, "screen", "Screen", "", Fmt.HEX),
         FieldSpec(STATUS, 16, 1, "state3", "Vehicle state 3", "", Fmt.HEX),
         FieldSpec(STATUS, 17, 1, "absMil", "ABS fault blink code"),
@@ -98,13 +100,19 @@ object ApacheFields {
         FieldSpec(ENGINE, 4, 2, "injAccum", "Accumulated injection time (raw)"),
         FieldSpec(ENGINE, 6, 1, "map", "Manifold pressure", "kPa"),
         FieldSpec(ENGINE, 7, 1, "baro", "Barometric pressure", "kPa"),
-        FieldSpec(ENGINE, 8, 1, "intakeTemp", "Intake air temperature (raw)"),
-        FieldSpec(ENGINE, 9, 1, "engineTemp18", "Engine temperature (engine frame)", "°C", Fmt.TEMP_OFFSET_25),
+        FieldSpec(ENGINE, 8, 1, "intakeTemp", "Intake air temperature", "°C"),
+        FieldSpec(ENGINE, 9, 1, "engineTemp", "Engine temperature", "°C", Fmt.TEMP_OFFSET_25),
         FieldSpec(ENGINE, 10, 2, "injTime", "Injection time (raw)"),
         FieldSpec(ENGINE, 12, 1, "battery", "Battery", "V", Fmt.TENTHS),
         FieldSpec(ENGINE, 13, 2, "runTime", "Run time since start", "s"),
         FieldSpec(ENGINE, 15, 2, "distance", "Distance travelled (raw)"),
         FieldSpec(ENGINE, 17, 2, "injVolume", "Injection volume (raw)"),
+
+        // 0x19 — trips. Not in the official Apache table; read from the RTR 160 4V.
+        FieldSpec(TRIPS, 5, 3, "tripA", "Trip A", "km"),
+        FieldSpec(TRIPS, 8, 3, "tripB", "Trip B", "km"),
+        FieldSpec(TRIPS, 14, 1, "avgMileageA", "Average mileage A", "km/l"),
+        FieldSpec(TRIPS, 15, 1, "avgMileageB", "Average mileage B", "km/l"),
     )
 
     private val byKey: Map<String, FieldSpec> = all.associateBy { it.key }
@@ -128,6 +136,7 @@ object ApacheFields {
     fun format(spec: FieldSpec, raw: Long): String = when (spec.fmt) {
         Fmt.INT -> raw.toString()
         Fmt.TENTHS -> String.format(Locale.US, "%.1f", raw / 10.0)
+        Fmt.HALF -> (raw / 2).toString()
         Fmt.TEMP_OFFSET_25 -> if (raw < 25) "0" else (raw - 25).toString()
         Fmt.GEAR -> when (raw) {
             0L, 8L -> "N"

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,12 +25,18 @@ import androidx.compose.ui.unit.sp
 import dev.rtrcompanion.data.AppState
 import dev.rtrcompanion.data.Reading
 import dev.rtrcompanion.protocol.ApacheFields
+import dev.rtrcompanion.protocol.NavInstruction
+import java.util.Locale
 
 /** Values shown on the ride screen, in order. Everything else is on Diagnostics. */
 private val rideKeys = listOf(
-    "odometer", "engineTemp", "battery", "fuel",
-    "tripDistance", "range", "throttle", "topSpeed",
-    "avgSpeed", "mileage", "mil", "absMil",
+    "odometer", "tripF",
+    "tripA", "tripB",
+    "avgMileageA", "avgMileageB",
+    "engineTemp", "battery",
+    "intakeTemp", "fuel",
+    "throttle", "topSpeed",
+    "avgSpeed", "mil",
 )
 
 private const val STALE_MS = 5_000L
@@ -44,6 +51,7 @@ private fun valueOf(r: Map<String, Reading>, key: String): String {
 fun RideScreen() {
     val link by AppState.link.collectAsState()
     val readings by AppState.readings.collectAsState()
+    val nav by AppState.nav.collectAsState()
     val now = rememberNow()
 
     Column(
@@ -53,6 +61,10 @@ fun RideScreen() {
             .padding(16.dp),
     ) {
         StatusBanner(link)
+        nav?.let {
+            Spacer(Modifier.height(12.dp))
+            NavCard(it)
+        }
         Spacer(Modifier.height(12.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -82,11 +94,38 @@ fun RideScreen() {
 
         Text(
             "— means the bike has not sent this value. Faded values are older than 5 seconds. " +
-                "Fields your cluster never sends will stay at — or 0; see Diagnostics for the raw bytes.",
+                "Range to empty is not shown: the RTR 160 4V does not send it. " +
+                "See Diagnostics for every raw byte.",
             style = MaterialTheme.typography.bodySmall,
         )
     }
 }
+
+@Composable
+private fun NavCard(n: NavInstruction) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text("${n.source} · ${n.maneuver.label}", style = MaterialTheme.typography.labelMedium)
+            Text(
+                n.distanceToTurnM?.let { formatDistance(it) } ?: "—",
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            if (n.text.isNotBlank()) Text(n.text, style = MaterialTheme.typography.bodyMedium)
+            val left = listOfNotNull(
+                n.remainingM?.let { formatDistance(it) },
+                n.remainingMin?.let { "$it min" },
+            ).joinToString(" · ")
+            if (left.isNotEmpty()) Text("Left: $left", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+private fun formatDistance(m: Int): String =
+    if (m >= 1000) String.format(Locale.US, "%.1f km", m / 1000.0) else "$m m"
 
 @Composable
 private fun BigTile(label: String, value: String, unit: String, reading: Reading?, now: Long, modifier: Modifier) {

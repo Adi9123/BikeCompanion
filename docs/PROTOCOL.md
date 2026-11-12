@@ -159,10 +159,75 @@ The official app can also write calibration values and vehicle settings
 (follow-me headlamp timer, idle start-stop timer, ride mode). Those change how
 the bike behaves. This app does not send them.
 
+## Measured on an RTR 160 4V (first ride, v0.1.0)
+
+- **Scramble is `XOR 0xEB`**, detected from the checksums. The official app uses
+  this key for one Apache family; the table above expected `0xEA` for 4V bikes.
+- The cluster first sends a few **all-zero frames** while it wakes up. They are
+  not data and are skipped.
+- Frames arrive about every 250 ms, cycling through `10`, `11`, `12`, `16`,
+  `18` and `19`.
+- **`5A 12` is all zeros** apart from position 7: trip distance, range and trip
+  mileage from the official table are not sent by this cluster.
+- **`5A 10` position 15-16 is Trip F** in tenths of a km; it rises exactly with
+  the odometer.
+- **`5A 11` position 14 is not engine temperature** on this bike; it is a bit
+  field that changes with the lamps. Engine temperature comes from `5A 18`
+  position 9 (raw − 25, rose from 40 to 73 °C as the engine warmed). `5A 18`
+  position 8 is intake-air temperature in °C and position 12 battery voltage
+  in tenths of a volt (12.4 V engine off, 14.6 V running).
+- **`5A 19` is not in the official table.** Positions 5-7 and 8-10 count whole
+  kilometres (each rose by one exactly when the odometer passed a whole km);
+  read as Trip A and Trip B. Positions 14 and 15 read 33, likely average
+  mileage in km/l. To confirm against the cluster display.
+- `5A 10` position 12 becomes `0x80` just before the link drops when the
+  ignition is switched off.
+- Range to empty was not found in any frame.
+
+## Navigation (phone → cluster)
+
+The family this bike belongs to takes two frames per update, both with a
+checksum and both scrambled.
+
+### `5A 4E`: navigation control
+
+| Pos | Len | Field |
+| ---: | ---: | :--- |
+| 3 | 2 | Distance to the turn, metres, rounded to 50 m |
+| 5 | 2 | Time left, minutes |
+| 7 | 3 | Distance left, metres |
+| 10 | 1 | Arrow code (see `Maneuver` in `Nav.kt`) |
+| 11 | 1 | Text lines (1, or 2 when the text is longer than 17) |
+| 12 | 1 | Status, `0xFF` while navigating |
+| 13 | 1 | Unit, 0 |
+| 14 | 1 | Alert, 0 |
+| 15 | 1 | Prompt: 1 turn coming up, 3 turn left now, 4 turn right now, 5 straight for a while, 8 arrived |
+| 19 | 1 | Checksum |
+
+An all-zero control frame (`5A 4E`, zeros, checksum, `FF`) ends navigation.
+
+### `5B 4F`: instruction text
+
+Up to 16 characters from position 3, zero-padded, checksum at 19, `FF` at 20.
+
+### Arrow codes
+
+From the official app's Apache table: left 0, sharp left 1, slight left 2,
+keep left 7, merge left 8, U-turn left 9, right 16, sharp right 17, slight
+right 18, keep right 23, merge right 24, U-turn 25, head 33, arrived 34,
+ferry 35, straight 87, unknown 100, and roundabout codes 39-51, 71, 72 and 96.
+The app has an arrow-code tester to check each one on the cluster.
+
+### Where directions come from
+
+Google Maps does not share its route with other apps, but it shows the next
+step in its navigation notification. With notification access, the app reads
+that text (distance, instruction, time and distance left) and turns it into
+the frames above. The text is English; other languages are not parsed yet.
+
 ## Open questions for the bike
 
-1. Is the 4V scramble `0xEA`? (Diagnostics → "Bike's scramble")
-2. Which frames does the RTR 160 4V send, and which bytes change during a ride?
-3. Fuel level scale, and what byte 7 of `5A 11` holds.
-4. Does the cluster need the keepalive to stay connected, and does it accept it?
-5. Is the hour field 12 h or 24 h? (Check the cluster clock after connecting.)
+1. Do Trip A, Trip B and the two mileage values in `5A 19` match the cluster?
+2. Fuel level scale (`5A 10` position 7 moved between 2 and 4 during a ride).
+3. Which arrow codes draw which arrows on this cluster.
+4. Is the hour field 12 h or 24 h? (Check the cluster clock after connecting.)

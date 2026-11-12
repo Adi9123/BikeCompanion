@@ -77,13 +77,51 @@ class CodecTest {
 
     @Test
     fun decoderLearnsTheEbScramble() {
-        val clear = frame(0x11, 6 to 4, 14 to 110)
-        val inb = FrameDecoder().decode(Codec.xor(clear, Scramble.XOR_EB))!!
+        val status = frame(0x11, 6 to 4)
+        val inb = FrameDecoder().decode(Codec.xor(status, Scramble.XOR_EB))!!
         assertEquals(Scramble.XOR_EB, inb.scramble)
         assertTrue(inb.checksumOk)
         val v = ApacheFields.extract(inb.clear)
         assertEquals("4", ApacheFields.format(ApacheFields.spec("gear")!!, v["gear"]!!))
-        assertEquals("85", ApacheFields.format(ApacheFields.spec("engineTemp")!!, v["engineTemp"]!!))
+
+        // engine frame: engine temperature at position 9 (raw - 25), battery at 12 (tenths of a volt)
+        val engine = frame(0x18, 9 to 110, 12 to 0x92)
+        val e = ApacheFields.extract(FrameDecoder().decode(Codec.xor(engine, Scramble.XOR_EB))!!.clear)
+        assertEquals("85", ApacheFields.format(ApacheFields.spec("engineTemp")!!, e["engineTemp"]!!))
+        assertEquals("14.6", ApacheFields.format(ApacheFields.spec("battery")!!, e["battery"]!!))
+    }
+
+    /** A frame exactly as an RTR 160 4V sent it (the empty lap-timer frame). */
+    @Test
+    fun realRtr160Frame() {
+        val wire = ByteArray(20) { 0xEB.toByte() }
+        wire[0] = 0x5A
+        wire[1] = 0x16
+        wire[18] = 0x64
+        wire[19] = 0xFF.toByte()
+        val inb = FrameDecoder().decode(wire)!!
+        assertEquals(Scramble.XOR_EB, inb.scramble)
+        assertTrue(inb.checksumOk)
+        assertEquals(0x8F, inb.clear[18].toInt() and 0xFF)
+        for (i in 2..17) assertEquals(0, inb.clear[i].toInt())
+    }
+
+    @Test
+    fun tripsFrame() {
+        // Trip A 6755 km, trip B 120 km, average mileage 33 and 41 km/l
+        val f = frame(0x19, 6 to 0x1A, 7 to 0x63, 10 to 120, 14 to 33, 15 to 41)
+        val v = ApacheFields.extract(f)
+        assertEquals(6755L, v["tripA"])
+        assertEquals(120L, v["tripB"])
+        assertEquals(33L, v["avgMileageA"])
+        assertEquals(41L, v["avgMileageB"])
+    }
+
+    @Test
+    fun tripFIsTenthsOfAKilometre() {
+        val f = frame(0x10, 15 to 0x14, 16 to 0x84)
+        val v = ApacheFields.extract(f)
+        assertEquals("525.2", ApacheFields.format(ApacheFields.spec("tripF")!!, v["tripF"]!!))
     }
 
     @Test

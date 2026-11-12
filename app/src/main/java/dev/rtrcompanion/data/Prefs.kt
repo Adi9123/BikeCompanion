@@ -47,5 +47,15 @@ object Prefs {
         get() = sp.getString("riderName", "") ?: ""
         set(v) = sp.edit().putString("riderName", v).apply()
 
-    fun scheme(name: String): Scramble? = Scramble.entries.firstOrNull { it.name == name }
+    /** Show Google Maps directions on the cluster. */
+    var navEnabled: Boolean
+        get() = sp.getBoolean("navEnabled", true)
+        set(v) = sp.edit().putBoolean("navEnabled", v).apply()
+
+    /** The scramble this bike was last seen using, so sending can start before the first frame. */
+    var lastScheme: String?
+        get() = sp.getString("lastScheme", null)
+        set(v) = sp.edit().putString("lastScheme", v).apply()
+
+    fun scheme(name: String?): Scramble? = Scramble.entries.firstOrNull { it.name == name }
 }

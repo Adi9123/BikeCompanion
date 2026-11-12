@@ -25,7 +25,8 @@ account, no cloud and no internet permission; the build fails if one sneaks in.
 | **Ride** | Speed, RPM, gear, odometer, engine temperature, battery voltage, fuel, trip, range, throttle, fault codes |
 | **Diagnostics** | Connection health (state, signal, drops and their reasons), decoding status, and every frame the bike sends as a byte grid with changing bytes highlighted |
 | **Log** | Every frame in and out with timestamps, shareable as a file |
-| **Bike** | Scan, connect, auto-reconnect, settings, rider name on the cluster |
+| **Navigation** | Google Maps turn-by-turn on the cluster: arrow, distance, instruction text |
+| **Bike** | Scan, connect, auto-reconnect, settings, rider name, navigation test and arrow-code tester |
 
 A `—` means the bike has not sent that value. The app never shows a made-up
 `0`.
@@ -73,7 +74,18 @@ Keep `rtr.jks` safe and out of the repository.
 5. Compare the **Ride** screen with the cluster: speed, odometer, gear, RPM.
 6. **Log** → Share log file, so the session can be analysed.
 
+## Navigation
+
+1. **Bike** tab → **Open notification access** → turn on RTR Companion.
+2. Connect to the bike, then start a route in Google Maps.
+3. The arrow, distance to the turn and instruction appear on the cluster.
+
+The **Test** buttons send a direction without riding, and the arrow-code tester
+steps through the cluster's pictures. Google Maps must be in English for the
+text to be understood.
+
 ## Privacy
 
-Logs contain the bike's Bluetooth address. They stay on the phone unless you
+Logs contain the bike's Bluetooth address and, while navigating, the
+instructions Google Maps shows (street names). They stay on the phone unless you
 share them. Do not commit logs or captures to this repository.
