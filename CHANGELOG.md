@@ -3,6 +3,16 @@
 All notable changes to RTR Companion. Versions follow
 [semantic versioning](https://semver.org/); dates are release dates.
 
+## [0.8.2] - 2026-11-17
+
+- **Restore from anything you have.** Pick the backup zip, a zip you
+  re-made after extracting it, or the CSV files from inside it (several at
+  once). Each file is recognised by its contents. The fuel and service logs
+  are merged with what is already on the phone.
+- Restore now ends with a list of what was restored and, for anything
+  skipped, the reason.
+- The app version is shown at the bottom of Settings.
+
 ## [0.8.1] - 2026-11-17
 
 - **Restore works with any file manager.** The file picker only offered files

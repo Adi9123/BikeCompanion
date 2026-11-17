@@ -2,6 +2,9 @@ package dev.bikecompanion.backup
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
+import dev.bikecompanion.log.EventLog
+import java.io.ByteArrayInputStream
 import dev.bikecompanion.data.Prefs
 import dev.bikecompanion.fuel.FuelStore
 import dev.bikecompanion.garage.GarageStore
@@ -81,36 +84,117 @@ object Backup {
         return out
     }
 
+    /** What a restore did, file by file, so the rider sees exactly what happened. */
+    class Report {
+        val restored = ArrayList<String>()
+        val skipped = ArrayList<String>()
+    }
+
     /**
-     * Restores a backup and returns how many files came back. Any file can be
-     * picked (file managers label zips inconsistently), so this checks the
-     * contents and throws if it is not one of our backups.
+     * Restores from any mix of files: the backup zip (as made, or re-zipped
+     * with an extra folder inside), or the separate files from inside it
+     * (ride CSVs, refuels.csv, service-log.csv, battery.csv, maintenance.csv,
+     * spots.csv, prefs.txt). Each file is recognised by its contents and
+     * name, never by the type the file manager claims.
      */
-    fun restore(ctx: Context, uri: Uri): Int {
-        var count = 0
-        var recognised = false
-        val input = ctx.contentResolver.openInputStream(uri) ?: return 0
-        ZipInputStream(input.buffered()).use { zip ->
-            while (true) {
-                val e = zip.nextEntry ?: break
-                val name = e.name
-                if (e.isDirectory || name.contains("..")) continue
-                if (name == "prefs.txt") {
-                    recognised = true
-                    applyPrefs(zip.readBytes().decodeToString())
-                    continue
-                }
-                if (DIRS.none { name.startsWith("$it/") }) continue
-                val target = File(ctx.filesDir, name)
-                target.parentFile?.mkdirs()
-                target.outputStream().use { zip.copyTo(it) }
-                count++
-                recognised = true
+    fun restore(ctx: Context, uris: List<Uri>): Report {
+        val report = Report()
+        for (uri in uris) {
+            val name = displayName(ctx, uri)
+            val bytes = try {
+                ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            } catch (e: Exception) {
+                null
+            }
+            if (bytes == null) {
+                report.skipped += "$name: could not be opened"
+                continue
+            }
+            if (bytes.size >= 2 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte()) {
+                restoreZip(ctx, name, bytes, report)
+            } else {
+                restoreFile(ctx, name, bytes.decodeToString(), report)
             }
         }
-        require(recognised) { "Not a Bike Companion backup" }
         FuelStore.version.value++
         GarageStore.version.value++
-        return count
+        EventLog.i("Backup", "Restore: ${report.restored.size} restored, skipped: ${report.skipped.joinToString("; ")}")
+        return report
     }
+
+    private fun restoreZip(ctx: Context, zipName: String, bytes: ByteArray, report: Report) {
+        var found = 0
+        try {
+            ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+                while (true) {
+                    val e = zip.nextEntry ?: break
+                    if (e.isDirectory || e.name.contains("..")) continue
+                    // Accept "rides/x.csv" and also "some-folder/rides/x.csv" from a re-zipped backup.
+                    val parts = e.name.replace('\\', '/').split('/').filter { it.isNotEmpty() }
+                    val start = parts.indexOfFirst { it in DIRS || it == "prefs.txt" }
+                    if (start < 0) continue
+                    val rel = parts.drop(start).joinToString("/")
+                    val data = zip.readBytes()
+                    if (rel == "prefs.txt") {
+                        applyPrefs(data.decodeToString())
+                    } else {
+                        val target = File(ctx.filesDir, rel)
+                        target.parentFile?.mkdirs()
+                        target.writeBytes(data)
+                    }
+                    found++
+                }
+            }
+        } catch (e: Exception) {
+            report.skipped += "$zipName: damaged zip ($e)"
+            return
+        }
+        if (found == 0) report.skipped += "$zipName: no Bike Companion data inside" else report.restored += "$zipName: $found files"
+    }
+
+    private fun restoreFile(ctx: Context, name: String, text: String, report: Report) {
+        val lines = text.lines()
+        val firstData = lines.firstOrNull { it.isNotBlank() && !it.startsWith("#") } ?: ""
+        val base = name.substringAfterLast('/').substringAfterLast('\\')
+        val safe = base.filter { it.isLetterOrDigit() || it in "._-" }.ifBlank { "restored.csv" }
+        when {
+            firstData.startsWith("t,speed,rpm") -> {
+                val file = if (safe.endsWith(".csv")) safe else "$safe.csv"
+                File(File(ctx.filesDir, "rides").apply { mkdirs() }, file).writeText(text)
+                report.restored += "$base: ride"
+            }
+            firstData.startsWith("t,odo,litres") -> {
+                // Merge with refuels already on this phone, so nothing logged since is lost.
+                val target = File(File(ctx.filesDir, "fuel").apply { mkdirs() }, "refuels.csv")
+                val old = if (target.exists()) target.readLines() else emptyList()
+                val header = firstData
+                val rows = (old + lines).filter { it.isNotBlank() && !it.startsWith("t,odo,litres") }.distinct()
+                target.writeText((listOf(header) + rows).joinToString("\n"))
+                report.restored += "$base: fuel log"
+            }
+            base == "prefs.txt" -> {
+                applyPrefs(text)
+                report.restored += "$base: settings"
+            }
+            base in setOf("service-log.csv", "battery.csv", "spots.csv") -> {
+                val target = File(File(ctx.filesDir, "garage").apply { mkdirs() }, base)
+                val old = if (target.exists()) target.readLines() else emptyList()
+                target.writeText((old + lines).filter { it.isNotBlank() }.distinct().joinToString("\n"))
+                report.restored += "$base: merged"
+            }
+            base == "maintenance.csv" -> {
+                File(File(ctx.filesDir, "garage").apply { mkdirs() }, base).writeText(text)
+                report.restored += "$base: service reminders"
+            }
+            else -> report.skipped += "$base: not a Bike Companion file"
+        }
+    }
+
+    private fun displayName(ctx: Context, uri: Uri): String = try {
+        ctx.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+    } catch (e: Exception) {
+        null
+    } ?: uri.lastPathSegment ?: "file"
 }

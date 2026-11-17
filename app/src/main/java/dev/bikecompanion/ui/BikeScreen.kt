@@ -168,26 +168,43 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
     val scope = rememberCoroutineScope()
     val notificationAccess = AppState.navAccess.collectAsState().value ||
         NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
-    var confirmRestore by remember { mutableStateOf<Uri?>(null) }
-    val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) confirmRestore = uri
+    var confirmRestore by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var restoreReport by remember { mutableStateOf<Backup.Report?>(null) }
+    val restorePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) confirmRestore = uris
     }
 
-    confirmRestore?.let { uri ->
+    if (confirmRestore.isNotEmpty()) {
+        val uris = confirmRestore
         AlertDialog(
-            onDismissRequest = { confirmRestore = null },
-            title = { Text("Restore backup?") },
-            text = { Text("Rides, fuel, service and battery records from the backup are added to this phone. Files with the same name are replaced.") },
+            onDismissRequest = { confirmRestore = emptyList() },
+            title = { Text("Restore ${if (uris.size == 1) "this file" else "${uris.size} files"}?") },
+            text = { Text("Rides, fuel, service and battery records are added to this phone. The fuel and service logs are merged with what is already here.") },
             confirmButton = {
                 TextButton(onClick = {
-                    confirmRestore = null
+                    confirmRestore = emptyList()
                     scope.launch {
-                        val n = withContext(Dispatchers.IO) { runCatching { Backup.restore(ctx, uri) }.getOrDefault(-1) }
-                        Toast.makeText(ctx, if (n >= 0) "Restored $n files" else "That file is not a backup", Toast.LENGTH_LONG).show()
+                        restoreReport = withContext(Dispatchers.IO) { Backup.restore(ctx, uris) }
                     }
                 }) { Text("Restore") }
             },
-            dismissButton = { TextButton(onClick = { confirmRestore = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmRestore = emptyList() }) { Text("Cancel") } },
+        )
+    }
+    restoreReport?.let { r ->
+        AlertDialog(
+            onDismissRequest = { restoreReport = null },
+            title = { Text(if (r.restored.isEmpty()) "Nothing restored" else "Restored") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    r.restored.forEach { Text("✓ $it", style = MaterialTheme.typography.bodyMedium) }
+                    if (r.skipped.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        r.skipped.forEach { Text("✗ $it", style = MaterialTheme.typography.bodyMedium, color = Tone.Red) }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { restoreReport = null }) { Text("Done") } },
         )
     }
 
@@ -341,7 +358,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
                 }
             }
             Divider()
-            NavRow("Restore", "Bring back a backup file") { restorePicker.launch(arrayOf("*/*")) }
+            NavRow("Restore", "Pick the backup zip, or the CSV files from inside it") { restorePicker.launch(arrayOf("*/*")) }
         }
 
         // ------------------------------------------------------- tools
@@ -357,6 +374,15 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
         }
 
         Spacer(Modifier.height(16.dp))
+        val version = remember {
+            try {
+                ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName
+            } catch (e: Exception) {
+                null
+            }
+        }
+        Text("Bike Companion ${version ?: ""}", style = MaterialTheme.typography.labelMedium, color = Tone.Muted)
+        Spacer(Modifier.height(6.dp))
         Text(
             "Bike Companion talks to the bike directly over Bluetooth. Internet is used only for map tiles; " +
                 "nothing about you or your bike is uploaded. It never sends calibration or vehicle-setting commands.",
