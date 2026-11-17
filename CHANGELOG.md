@@ -3,6 +3,32 @@
 All notable changes to RTR Companion. Versions follow
 [semantic versioning](https://semver.org/); dates are release dates.
 
+## [0.8.0] - 2026-11-17
+
+**Now called Bike Companion.** RTR and Apache are TVS trademarks, so the app
+has its own name and a new app id. Install it as a new app: back up in the old
+version first (Settings > Your data > Back up), then restore in the new one.
+
+- **A complete redesign.** New look built from user stories and a written
+  design system: warm graphite and paper themes (dark, light or follow the
+  phone), one signature "phosphor" accent that means live and good, Space
+  Grotesk numerals and Manrope text, consistent spacing and cards everywhere.
+- **Hand-built motion.** The ignition sweep when the bike connects, a liquid
+  tab bar, odometer-style rolling numbers, a gear badge that pops on shifts,
+  turn arrows that swing in, alerts that drop in (danger glows), and a radar
+  while looking for the bike. Turned off when the phone's animations are off.
+- **Turn arrows read from Google Maps' arrow icon.** Maps often names the turn
+  only in its picture, so arrows were often wrong. The app now reads the
+  icon, learns from the text when it names the turn, and lets you correct
+  any arrow once (Settings > Navigation arrows).
+- **Fixed:** most direction words in Maps text were not being recognised.
+- **Connects by itself**: when the app opens, after the phone restarts, and in
+  the background as soon as the ignition comes on.
+- **Only calls and Google Maps reach the cluster** by default. Other apps are
+  opted in one by one (Settings > Other apps), sender's name only.
+- New ride dashboard: greeting, range as the fuel hero, directions card with
+  the same arrow the cluster gets, lamps and switches as chips.
+
 ## [0.7.0] - 2026-11-13
 
 - **Your own Info switch.** Pick what a short, double and long press of the

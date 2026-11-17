@@ -47,7 +47,7 @@ Google Maps directions on your bike's cluster. No account, no cloud.
 | **Map** | Live map that follows you, the ride being recorded, where you parked, spots saved with the Info switch, and "Navigate to bike" |
 | **Rides** | Every ride recorded automatically. Reports with distance, times, average and top speed, fuel used and cost, RPM, temperatures, battery, route coloured by speed, graphs, gear and ride-mode usage and a riding-style score. CSV and GPX export |
 | **Garage** | **Fuel**: refuel log, real mileage per tank, cost per km, fuel left and range. **Service**: reminders by km and days, service history with costs. **Battery**: health from resting, starting and charging voltage. **Stats**: week, month, all-time, records |
-| **More** | Connection, Info switch actions, ride-mode names, cluster display options, alerts, recording, backup and restore, switch learning, diagnostics |
+| **Settings** | Appearance (light, dark or follow the phone), connection, Info switch actions, ride-mode names, cluster display options, alerts, recording, backup and restore, switch learning, diagnostics |
 
 **On the bike's cluster:** Google Maps turn-by-turn (arrow, distance,
 instruction), caller name and missed-call count, WhatsApp and SMS sender,
@@ -66,6 +66,23 @@ reserve a long press finds a pump. Teach the app the switch once under
 
 **Also:** key-off detection with a "Ride ended?" prompt, home-screen widget,
 backup and restore of all records.
+
+## Design
+
+Bike Companion is designed to feel like part of the bike: calm until something
+matters, glanceable while riding, deep when parked. Dark and light themes,
+type set in Space Grotesk and Manrope, and every animation hand-built on
+Compose (no animation libraries), from the ignition sweep when the bike
+connects to the liquid tab bar.
+
+- [User stories](docs/design/USER_STORIES.md): who uses the app and what for.
+- [Design system](docs/design/DESIGN_SYSTEM.md): colour, type, spacing,
+  components and motion rules.
+- [AGENTS.md](AGENTS.md): working rules for contributors and AI agents.
+
+Fonts: [Space Grotesk](https://github.com/floriankarsten/space-grotesk) and
+[Manrope](https://github.com/sharanda/manrope), both under the SIL Open Font
+Licence ([licences](docs/design/fonts/)).
 
 ## Supported bikes
 
