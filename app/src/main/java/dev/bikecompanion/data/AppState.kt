@@ -119,14 +119,14 @@ object AppState {
             val passes = d.passes.toMutableMap()
             for (s in inb.passing) passes[s] = (passes[s] ?: 0L) + 1
             d.copy(
-                locked = if (inb.checksumOk) inb.scramble else d.locked,
+                locked = if (inb.checksumOk || inb.trusted) inb.scramble else d.locked,
                 passes = passes,
                 noScheme = d.noScheme + if (inb.passing.isEmpty()) 1 else 0,
                 total = d.total + 1,
             )
         }
         if (inb.usable) {
-            val values = ApacheFields.extract(inb.clear)
+            val values = dev.bikecompanion.protocol.Fields.extract(inb.clear)
             if (values.isNotEmpty()) {
                 readings.update { r -> r + values.mapValues { (_, v) -> Reading(v, now) } }
             }

@@ -3,6 +3,22 @@
 All notable changes to RTR Companion. Versions follow
 [semantic versioning](https://semver.org/); dates are release dates.
 
+## [0.9.0] - 2026-11-17
+
+- **Pick your bike model** (Settings > Your bike model). Every model from the
+  official app is listed, grouped as Tested (Apache RTR 160 4V, Raider 125),
+  Should work (Apache RTR 160 2V and 180, Ntorq 125, Jupiter) or Not supported
+  yet (310s, Ronin, electric scooters). Apache RTR 160 4V is the default, and
+  connecting a bike for the first time asks which model it is.
+- **Each model shows only what it sends.** Raider, Jupiter and Ntorq get their
+  own data layouts, including range and fuel economy from the bike itself and
+  idle stop-start counts; scooters hide the gear.
+- **Fixed: Raider, Jupiter and Ntorq showed only some values.** Their frames
+  carry no checksum, so the app threw away nearly all of them. The scramble is
+  now learned from the data itself for these models.
+- The Ride screen suggests checking the model if the data does not match it.
+- New page: [docs/MODELS.md](docs/MODELS.md), what each model sends.
+
 ## [0.8.2] - 2026-11-17
 
 - **Restore from anything you have.** Pick the backup zip, a zip you

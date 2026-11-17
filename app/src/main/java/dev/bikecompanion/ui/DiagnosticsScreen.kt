@@ -33,7 +33,7 @@ import dev.bikecompanion.data.AppState
 import dev.bikecompanion.data.DecoderStatus
 import dev.bikecompanion.data.FrameStat
 import dev.bikecompanion.data.LinkStatus
-import dev.bikecompanion.protocol.ApacheFields
+import dev.bikecompanion.protocol.Fields
 import dev.bikecompanion.protocol.Codec
 import dev.bikecompanion.protocol.Scramble
 import java.util.Locale
@@ -129,7 +129,7 @@ private fun FrameCard(f: FrameStat, now: Long) {
     val seconds = (f.lastAt - f.firstAt) / 1000.0
     val rate = if (seconds >= 1.0) String.format(Locale.US, "%.1f/s", (f.count - 1) / seconds) else "—"
     val okPct = if (f.count > 0) f.checksumOk * 100 / f.count else 0
-    val name = ApacheFields.frameNames[f.id] ?: "Unknown"
+    val name = Fields.frameName(f.id) ?: "Unknown"
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(String.format(Locale.US, "5A %02X  ·  %s", f.id, name), fontWeight = FontWeight.Bold)
@@ -138,9 +138,9 @@ private fun FrameCard(f: FrameStat, now: Long) {
                 style = MaterialTheme.typography.bodySmall,
             )
             ByteGrid(f)
-            ApacheFields.forFrame(f.id).forEach { spec ->
+            Fields.forFrame(f.id).forEach { spec ->
                 val raw = Codec.be(f.lastClear, spec.index, spec.length)
-                val value = raw?.let { ApacheFields.format(spec, it) } ?: "—"
+                val value = raw?.let { Fields.format(spec, it) } ?: "—"
                 KeyValue("${spec.label}  [${spec.position}]", if (spec.unit.isEmpty()) value else "$value ${spec.unit}")
             }
         }

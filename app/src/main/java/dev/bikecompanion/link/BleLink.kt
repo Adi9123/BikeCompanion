@@ -19,6 +19,8 @@ import dev.bikecompanion.data.Prefs
 import dev.bikecompanion.log.EventLog
 import dev.bikecompanion.monitor.InfoButton
 import dev.bikecompanion.protocol.Codec
+import dev.bikecompanion.protocol.Family
+import dev.bikecompanion.protocol.Fields
 import dev.bikecompanion.protocol.FrameDecoder
 import dev.bikecompanion.protocol.Gatt
 import dev.bikecompanion.protocol.NavFrames
@@ -400,6 +402,7 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
             return
         }
         decoder.forced = Prefs.scheme(Prefs.inboundScheme)
+        decoder.checksummed = Fields.family == Family.APACHE || Fields.family == Family.NONE
         val inb = decoder.decode(bytes)
         if (inb == null) {
             EventLog.w(TAG, "RX too short: ${Codec.hex(bytes)}")
@@ -409,12 +412,13 @@ class BleLink(private val ctx: Context, private val scope: CoroutineScope) {
         AppState.onInbound(inb, now)
         if (inb.usable) InfoButton.onFrame(inb.id, inb.clear, now)
         val learned = inb.scramble
-        if (inb.checksumOk && !inb.forced && learned != null && Prefs.lastScheme != learned.name) {
+        if ((inb.checksumOk || inb.trusted) && !inb.forced && learned != null && Prefs.lastScheme != learned.name) {
             Prefs.lastScheme = learned.name
             EventLog.i(TAG, "This bike uses ${learned.label}; remembered for next time")
         }
         val verdict = when {
             inb.checksumOk -> "ok"
+            inb.trusted -> "no checksum (model has none)"
             inb.forced -> "checksum BAD (forced)"
             else -> "checksum BAD"
         }

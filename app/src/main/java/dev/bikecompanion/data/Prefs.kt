@@ -14,6 +14,7 @@ object Prefs {
         if (!::sp.isInitialized) {
             sp = ctx.applicationContext.getSharedPreferences("rtr", Context.MODE_PRIVATE)
         }
+        dev.bikecompanion.protocol.Fields.select(dev.bikecompanion.protocol.BikeModel.of(bikeModel))
     }
 
     var lastAddress: String?
@@ -80,6 +81,17 @@ object Prefs {
     var autoConnectOnOpen: Boolean
         get() = sp.getBoolean("autoConnectOnOpen", true)
         set(v) = sp.edit().putBoolean("autoConnectOnOpen", v).apply()
+
+    /** The rider's bike model (a BikeModel name). Apache RTR 160 4V until changed. */
+    var bikeModel: String
+        get() = sp.getString("bikeModel", null) ?: dev.bikecompanion.protocol.BikeModel.DEFAULT.name
+        set(v) {
+            sp.edit().putString("bikeModel", v).putBoolean("bikeModelChosen", true).apply()
+            dev.bikecompanion.protocol.Fields.select(dev.bikecompanion.protocol.BikeModel.of(v))
+        }
+
+    /** True once the rider has picked a model (rather than living with the default). */
+    val bikeModelChosen: Boolean get() = sp.getBoolean("bikeModelChosen", false)
 
     /** "system", "light" or "dark". */
     var themeMode: String

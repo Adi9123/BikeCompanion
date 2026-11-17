@@ -86,13 +86,19 @@ Licence ([licences](docs/design/fonts/)).
 
 ## Supported bikes
 
-| Bike | Status |
-| :--- | :--- |
-| Apache RTR 160 4V (SmartXonnect, LCD cluster) | Tested on a real bike |
-| Other Apache models with SmartXonnect | Should connect; the app detects the data format automatically. Not yet tested |
-| TFT models, Ntorq, Jupiter, Raider | Not targeted |
+Pick your model in **Settings > Your bike model** (Apache RTR 160 4V is the
+default). The app then shows only what that model sends.
 
-If you try it on another model, a shared log helps: see [Contributing](#contributing).
+| Model | Status |
+| :--- | :--- |
+| Apache RTR 160 4V (SmartXonnect, LCD cluster) | Tested |
+| Raider 125 (SmartXonnect) | Tested |
+| Apache RTR 160 2V, Apache RTR 180 | Should work, not tested yet |
+| Ntorq 125, Jupiter (SmartXonnect) | Should work, not tested yet |
+| Apache RR 310, RTR 310, Ronin, iQube, TVS X, Orbiter | Not supported yet (different connection) |
+
+What each model sends, and why the model choice matters: [docs/MODELS.md](docs/MODELS.md).
+If you try it on an untested model, a shared log helps: see [Contributing](#contributing).
 
 ## Install
 

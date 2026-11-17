@@ -64,6 +64,7 @@ import dev.bikecompanion.data.Prefs
 import dev.bikecompanion.garage.BitRef
 import dev.bikecompanion.garage.Switch as BikeSwitch
 import dev.bikecompanion.garage.SwitchLearn
+import dev.bikecompanion.protocol.Fields
 import dev.bikecompanion.garage.RideModes
 import dev.bikecompanion.monitor.InfoAction
 import dev.bikecompanion.monitor.InfoButton
@@ -80,7 +81,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private enum class Page { MAIN, CONNECT, DISPLAY_TESTS, LEARN, DIAGNOSTICS, ADVANCED, INFO, APPS, ARROWS }
+private enum class Page { MAIN, CONNECT, DISPLAY_TESTS, LEARN, DIAGNOSTICS, ADVANCED, INFO, APPS, ARROWS, MODEL }
 
 /** The More tab: settings in sections, and the tools as separate pages. */
 @Composable
@@ -89,7 +90,13 @@ fun MoreScreen(permissionsGranted: Boolean, onRequestPermissions: () -> Unit) {
     if (page != Page.MAIN) BackHandler { page = Page.MAIN }
     when (page) {
         Page.MAIN -> MoreMain(permissionsGranted, onRequestPermissions) { page = it }
-        Page.CONNECT -> SubPage("Connect a bike", { page = Page.MAIN }) { ConnectPage(permissionsGranted, onRequestPermissions) }
+        Page.CONNECT -> SubPage("Connect a bike", { page = Page.MAIN }) {
+            ConnectPage(permissionsGranted, onRequestPermissions) {
+                // First bike: ask which model it is, so the right values show from the start.
+                page = if (Prefs.bikeModelChosen) Page.MAIN else Page.MODEL
+            }
+        }
+        Page.MODEL -> SubPage("Your bike model", { page = Page.MAIN }) { ModelPage { page = Page.MAIN } }
         Page.DISPLAY_TESTS -> SubPage("Cluster display tests", { page = Page.MAIN }) { DisplayTestsPage() }
         Page.LEARN -> SubPage("Learn bike switches", { page = Page.MAIN }) { LearnSwitchesPage() }
         Page.ADVANCED -> SubPage("Advanced", { page = Page.MAIN }) { AdvancedPage() }
@@ -225,6 +232,15 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
 
         // ------------------------------------------------------- bike
         SectionTitle("Bike")
+        Panel(Modifier.fillMaxWidth(), onClick = { open(Page.MODEL) }) {
+            Text("Model", style = MaterialTheme.typography.labelMedium, color = Tone.Muted)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(Fields.model.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                SupportBadge(Fields.model.support)
+            }
+            Text("Tap to change. The app shows only what your model sends.", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
+        }
+        Spacer(Modifier.height(Space.betweenCards))
         Panel(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Dot(linkColor(link.phase), 10)
@@ -522,7 +538,7 @@ private fun ActionRow(title: String, selected: String, onSelect: (String) -> Uni
 // ---------------------------------------------------------------- connect
 
 @Composable
-private fun ConnectPage(permissionsGranted: Boolean, onRequestPermissions: () -> Unit) {
+private fun ConnectPage(permissionsGranted: Boolean, onRequestPermissions: () -> Unit, onConnected: () -> Unit = {}) {
     val ctx = LocalContext.current
     val scanner = remember { Scanner(ctx.applicationContext) }
     val results by scanner.results.collectAsState()
@@ -566,6 +582,7 @@ private fun ConnectPage(permissionsGranted: Boolean, onRequestPermissions: () ->
             Prefs.lastName = f.name
             LinkService.connect(ctx, f.address)
             Toast.makeText(ctx, "Connecting to ${f.name ?: f.address}", Toast.LENGTH_SHORT).show()
+            onConnected()
         }
     }
 }

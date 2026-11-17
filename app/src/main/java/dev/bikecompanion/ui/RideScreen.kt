@@ -60,7 +60,9 @@ import dev.bikecompanion.garage.Switch
 import dev.bikecompanion.monitor.Alert
 import dev.bikecompanion.monitor.BikeMonitor
 import dev.bikecompanion.monitor.Severity
-import dev.bikecompanion.protocol.ApacheFields
+import dev.bikecompanion.protocol.Family
+import dev.bikecompanion.protocol.Fields
+import dev.bikecompanion.protocol.Support
 import dev.bikecompanion.protocol.NavInstruction
 import dev.bikecompanion.ride.RecPhase
 import dev.bikecompanion.ride.RideRecorder
@@ -74,8 +76,8 @@ private const val REDLINE_RPM = 9_500f
 
 private fun valueOf(r: Map<String, Reading>, key: String): String {
     val reading = r[key] ?: return "—"
-    val spec = ApacheFields.spec(key) ?: return reading.raw.toString()
-    return ApacheFields.format(spec, reading.raw)
+    val spec = Fields.spec(key) ?: return reading.raw.toString()
+    return Fields.format(spec, reading.raw)
 }
 
 /**
@@ -123,6 +125,12 @@ fun RideScreen(onOpenBike: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             StatusPill(link, Modifier.pressable(onClick = onOpenBike))
+            val model = Fields.model
+            Pill(
+                model.title,
+                if (model.support == Support.TESTED) Tone.AccentText else Tone.Amber,
+                Modifier.pressable(onClick = onOpenBike),
+            )
             readings["mode"]?.takeIf { now - it.at < STALE_MS }?.let { r ->
                 val name = RideModes.name(RideModes.mode(r.raw), RideModes.decodeNames(Prefs.modeNames))
                 Pill(
@@ -131,6 +139,10 @@ fun RideScreen(onOpenBike: () -> Unit) {
                 )
             }
         }
+
+        // ------------------------------------------------------------ model check
+        val frames by AppState.frames.collectAsState()
+        ModelHint(frames.keys, frames.values.sumOf { it.count }, onOpenBike)
 
         // ------------------------------------------------------------ alerts
         alerts.forEachIndexed { i, a ->
@@ -147,7 +159,7 @@ fun RideScreen(onOpenBike: () -> Unit) {
             Gauge(
                 speed = readings["speed"]?.raw?.toFloat(),
                 rpm = readings["rpm"]?.raw?.toFloat(),
-                gear = valueOf(readings, "gear"),
+                gear = if (Fields.has("gear")) valueOf(readings, "gear") else null,
                 stale = stale("speed"),
                 live = live,
             )
@@ -237,20 +249,32 @@ fun RideScreen(onOpenBike: () -> Unit) {
         }
 
         // ------------------------------------------------------------ trip
+        // Only what this model sends; see docs/MODELS.md.
         SectionTitle("Trip")
-        TileRow { m ->
-            StatTile("Trip A", valueOf(readings, "tripA"), "km", m, stale = stale("tripA"))
-            StatTile("Trip B", valueOf(readings, "tripB"), "km", m, stale = stale("tripB"))
-        }
-        Spacer(Modifier.height(Space.betweenCards))
-        TileRow { m ->
-            StatTile("Mileage", valueOf(readings, "avgMileageA"), "km/l", m, Tone.AccentText, stale("avgMileageA"))
-            StatTile("Avg speed", valueOf(readings, "avgSpeed"), "km/h", m, stale = stale("avgSpeed"))
-        }
-        Spacer(Modifier.height(Space.betweenCards))
-        TileRow { m ->
-            StatTile("Odometer", valueOf(readings, "odometer"), "km", m, stale = stale("odometer"))
-            StatTile("On reserve", valueOf(readings, "tripF"), "km", m, stale = stale("tripF"))
+        val tripTiles = buildList {
+            add(Tile("Trip A", "tripA", "km"))
+            add(Tile("Trip B", "tripB", "km"))
+            add(Tile("Range", "bikeRange", "km", Tone.AccentText))
+            add(Tile("Fuel economy", "avgEconomy", "km/l", Tone.AccentText))
+            add(Tile("Economy now", "instEconomy", "km/l"))
+            if (Fields.has("avgMileageA")) add(Tile("Mileage", "avgMileageA", "km/l", Tone.AccentText))
+            else if (!Fields.has("avgEconomy")) add(Tile("Mileage", "avgMileage", "km/l", Tone.AccentText))
+            add(Tile("Avg speed", "avgSpeed", "km/h"))
+            add(Tile("Odometer", "odometer", "km"))
+            add(Tile("On reserve", "tripF", "km"))
+        }.filter { Fields.has(it.key) }
+        Tiles(tripTiles, readings, ::stale)
+
+        if (Fields.has("issCount")) {
+            SectionTitle("Idle stop-start")
+            TileRow { m ->
+                StatTile("Engine stops", valueOf(readings, "issCount"), "", m, stale = stale("issCount"))
+                StatTile(
+                    "Engine-off time",
+                    readings["issDuration"]?.raw?.let { duration(it) } ?: "—",
+                    "", m, Tone.AccentText, stale("issDuration"),
+                )
+            }
         }
 
         // ------------------------------------------------------------ engine
@@ -440,7 +464,7 @@ private fun Bar(label: String, fraction: Float?, value: String, color: Color) {
  * a needle spring (follow-through).
  */
 @Composable
-fun Gauge(speed: Float?, rpm: Float?, gear: String, stale: Boolean, live: Boolean) {
+fun Gauge(speed: Float?, rpm: Float?, gear: String?, stale: Boolean, live: Boolean) {
     val sweep = remember { Animatable(0f) }
     var sweeping by remember { mutableStateOf(false) }
     LaunchedEffect(live) {
@@ -513,7 +537,7 @@ fun Gauge(speed: Float?, rpm: Float?, gear: String, stale: Boolean, live: Boolea
             Text("km/h", style = MaterialTheme.typography.labelMedium, color = Tone.Muted)
             Spacer(Modifier.height(14.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GearBadge(gear)
+                if (gear != null) GearBadge(gear)
                 Text(
                     if (rpm == null) "— rpm" else String.format(Locale.US, "%,d rpm", (frac * MAX_RPM).toInt().coerceAtLeast(0)),
                     style = MaterialTheme.typography.labelLarge,
@@ -582,3 +606,39 @@ private fun NavCard(n: NavInstruction) {
 
 fun formatDistance(m: Int): String =
     if (m >= 1000) String.format(Locale.US, "%.1f km", m / 1000.0) else "$m m"
+
+private class Tile(val label: String, val key: String, val unit: String, val accent: Color? = null)
+
+@Composable
+private fun Tiles(tiles: List<Tile>, readings: Map<String, Reading>, stale: (String) -> Boolean) {
+    tiles.chunked(2).forEachIndexed { i, pair ->
+        if (i > 0) Spacer(Modifier.height(Space.betweenCards))
+        TileRow { m ->
+            pair.forEach { t -> StatTile(t.label, valueOf(readings, t.key), t.unit, m, t.accent ?: Tone.Text, stale(t.key)) }
+            if (pair.size == 1) Spacer(m)
+        }
+    }
+}
+
+/**
+ * Apache clusters send frames 0x12 and 0x16; the Raider and the scooters never
+ * do. If what arrives does not match the chosen model, say so, once enough
+ * frames have come in to be sure.
+ */
+@Composable
+private fun ModelHint(frameIds: Set<Int>, total: Long, onOpenBike: () -> Unit) {
+    val apacheFrames = frameIds.any { it == 0x12 || it == 0x16 }
+    val family = Fields.family
+    val message = when {
+        family != Family.APACHE && family != Family.NONE && apacheFrames ->
+            "This bike sends Apache data. Pick your model so the right values show."
+        family == Family.APACHE && total > 300 && !apacheFrames ->
+            "This doesn't look like an Apache's data. Pick your model so the right values show."
+        else -> null
+    } ?: return
+    Spacer(Modifier.height(12.dp))
+    Panel(Modifier.fillMaxWidth().reveal(0), color = Tone.Amber.copy(alpha = 0.14f), padding = 16.dp, onClick = onOpenBike) {
+        Text("Check your bike model", style = MaterialTheme.typography.titleMedium, color = Tone.Amber)
+        Text(message, style = MaterialTheme.typography.bodySmall, color = Tone.Text)
+    }
+}
