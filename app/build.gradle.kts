@@ -10,11 +10,11 @@ plugins {
 val stableKeystore = file("release.jks")
 
 android {
-    namespace = "dev.rtrcompanion"
+    namespace = "dev.bikecompanion"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.rtrcompanion"
+        applicationId = "dev.bikecompanion"
         minSdk = 26
         targetSdk = 35
         versionCode = 8

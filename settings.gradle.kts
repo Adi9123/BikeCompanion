@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "RTRCompanion"
+rootProject.name = "BikeCompanion"
 include(":app")

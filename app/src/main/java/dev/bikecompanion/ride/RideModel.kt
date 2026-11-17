@@ -1,0 +1,328 @@
+package dev.bikecompanion.ride
+
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+/** One second of a ride. Every field is optional: the bike or GPS may not have sent it. */
+data class RideSample(
+    val t: Long,
+    val speed: Int? = null,
+    val rpm: Int? = null,
+    /** 0 = neutral, 1..6. */
+    val gear: Int? = null,
+    val engineTemp: Int? = null,
+    val battery: Float? = null,
+    val throttle: Int? = null,
+    /** Odometer in km. */
+    val odo: Double? = null,
+    val lat: Double? = null,
+    val lon: Double? = null,
+    /** The app's lifetime fuel-injection counter total at this moment. */
+    val inj: Long? = null,
+    /** Ride-mode number from the cluster (see RideModes). */
+    val mode: Int? = null,
+)
+
+data class RideSummary(
+    val id: String,
+    val start: Long,
+    val end: Long,
+    val bike: String = "",
+    val distanceKm: Double = 0.0,
+    val durationS: Long = 0,
+    val movingS: Long = 0,
+    val idleS: Long = 0,
+    /** Average while moving, km/h. */
+    val avgSpeed: Double = 0.0,
+    val maxSpeed: Int = 0,
+    val avgRpm: Int = 0,
+    val maxRpm: Int = 0,
+    val maxEngineTemp: Int? = null,
+    val minBattery: Float? = null,
+    val maxBattery: Float? = null,
+    /** Estimated from distance and the cluster's average mileage. */
+    val fuelL: Double? = null,
+    val mileageKmpl: Int? = null,
+    /** Seconds spent moving in each gear (0 = neutral). */
+    val gearSeconds: Map<Int, Long> = emptyMap(),
+    val hasRoute: Boolean = false,
+    /** Fuel-injection counter steps during the ride; litres once the counter is calibrated. */
+    val injCounts: Long = 0,
+    /** Seconds at or above [RideStats.OVER_REV_RPM]. */
+    val overRevS: Long = 0,
+    /** Speed gained 10 km/h or more within a second. */
+    val harshAccel: Int = 0,
+    /** Speed lost 12 km/h or more within a second. */
+    val hardBrake: Int = 0,
+    /** Seconds from the start until the engine reached 60 °C. */
+    val warmupS: Long? = null,
+    val avgThrottle: Int = 0,
+    /** 0..100, higher is smoother. */
+    val smoothness: Int = 0,
+    /** Seconds spent moving in each ride mode, by the cluster's mode number. */
+    val modeSeconds: Map<Int, Long> = emptyMap(),
+)
+
+object RideStats {
+    const val OVER_REV_RPM = 8_000
+    private const val EARTH_M = 6_371_000.0
+
+    fun haversineM(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val p1 = Math.toRadians(lat1)
+        val p2 = Math.toRadians(lat2)
+        val dp = p2 - p1
+        val dl = Math.toRadians(lon2 - lon1)
+        val a = sin(dp / 2) * sin(dp / 2) + cos(p1) * cos(p2) * sin(dl / 2) * sin(dl / 2)
+        return 2 * EARTH_M * asin(sqrt(a))
+    }
+
+    /** Distance along the GPS track, ignoring jumps faster than 70 m/s (GPS glitches). */
+    fun gpsDistanceKm(samples: List<RideSample>): Double {
+        var meters = 0.0
+        var prev: RideSample? = null
+        for (s in samples) {
+            if (s.lat == null || s.lon == null) continue
+            val p = prev
+            if (p?.lat != null && p.lon != null) {
+                val d = haversineM(p.lat, p.lon, s.lat, s.lon)
+                val dt = ((s.t - p.t) / 1000.0).coerceAtLeast(1.0)
+                if (d / dt < 70.0) meters += d
+            }
+            prev = s
+        }
+        return meters / 1000.0
+    }
+
+    /** Distance from the bike's odometer, falling back to GPS. */
+    fun distanceKm(samples: List<RideSample>): Double {
+        val odos = samples.mapNotNull { it.odo }
+        val odoDist = if (odos.size >= 2) odos.last() - odos.first() else 0.0
+        return if (odoDist > 0.0) odoDist else gpsDistanceKm(samples)
+    }
+
+    fun compute(id: String, samples: List<RideSample>, mileageKmpl: Int?, bike: String = ""): RideSummary {
+        if (samples.isEmpty()) return RideSummary(id, 0, 0, bike)
+        val start = samples.first().t
+        val end = samples.last().t
+        var moving = 0L
+        var idle = 0L
+        val gears = HashMap<Int, Long>()
+        val modes = HashMap<Int, Long>()
+        for (i in 1 until samples.size) {
+            val dt = ((samples[i].t - samples[i - 1].t) / 1000).coerceIn(0, 5)
+            val sp = samples[i].speed ?: 0
+            if (sp > 0) {
+                moving += dt
+                samples[i].gear?.let { g -> gears[g] = (gears[g] ?: 0L) + dt }
+                samples[i].mode?.let { m -> modes[m] = (modes[m] ?: 0L) + dt }
+            } else {
+                idle += dt
+            }
+        }
+        val dist = distanceKm(samples)
+        var overRev = 0L
+        var harsh = 0
+        var brake = 0
+        for (i in 1 until samples.size) {
+            val a = samples[i - 1]
+            val b = samples[i]
+            val dt = ((b.t - a.t) / 1000).coerceIn(0, 5)
+            if ((b.rpm ?: 0) >= OVER_REV_RPM) overRev += dt
+            val sa = a.speed
+            val sb = b.speed
+            if (sa != null && sb != null && b.t - a.t in 500..1_600) {
+                if (sb - sa >= 10) harsh++
+                if (sa - sb >= 12) brake++
+            }
+        }
+        val warm = samples.firstOrNull { (it.engineTemp ?: 0) >= 60 }?.let { (it.t - samples.first().t) / 1000 }
+        val throttles = samples.filter { (it.speed ?: 0) > 0 }.mapNotNull { it.throttle }
+        val events = (harsh + brake) / maxOf(dist / 10.0, 1.0)
+        val overRevPct = if (moving > 0) overRev.toDouble() / moving else 0.0
+        val smooth = (100 - events * 8 - overRevPct * 50).coerceIn(0.0, 100.0).roundToInt()
+        val rpms = samples.mapNotNull { it.rpm }.filter { it > 0 }
+        val batteries = samples.mapNotNull { it.battery }.filter { it > 0f }
+        val mileage = mileageKmpl?.takeIf { it > 0 }
+        return RideSummary(
+            id = id,
+            start = start,
+            end = end,
+            bike = bike,
+            distanceKm = dist,
+            durationS = (end - start) / 1000,
+            movingS = moving,
+            idleS = idle,
+            avgSpeed = if (moving > 0) dist / (moving / 3600.0) else 0.0,
+            maxSpeed = samples.maxOf { it.speed ?: 0 },
+            avgRpm = if (rpms.isEmpty()) 0 else rpms.average().roundToInt(),
+            maxRpm = rpms.maxOrNull() ?: 0,
+            maxEngineTemp = samples.mapNotNull { it.engineTemp }.maxOrNull(),
+            minBattery = batteries.minOrNull(),
+            maxBattery = batteries.maxOrNull(),
+            fuelL = mileage?.let { dist / it },
+            mileageKmpl = mileage,
+            gearSeconds = gears,
+            hasRoute = samples.count { it.lat != null && it.lon != null } >= 2,
+            injCounts = samples.mapNotNull { it.inj }.let { if (it.size >= 2) (it.last() - it.first()).coerceAtLeast(0) else 0L },
+            overRevS = overRev,
+            harshAccel = harsh,
+            hardBrake = brake,
+            warmupS = warm,
+            avgThrottle = if (throttles.isEmpty()) 0 else throttles.average().roundToInt(),
+            smoothness = smooth,
+            modeSeconds = modes,
+        )
+    }
+}
+
+/**
+ * Ride file format: `#key=value` header lines holding the summary, then CSV
+ * with one row per second. Plain text so a ride can be opened in a spreadsheet.
+ */
+object RideCsv {
+    const val HEADER = "t,speed,rpm,gear,engineTemp,battery,throttle,odo,lat,lon,inj,mode"
+
+    fun write(summary: RideSummary, samples: List<RideSample>): String = buildString {
+        for ((k, v) in metaOf(summary)) append('#').append(k).append('=').append(v).append('\n')
+        append(HEADER).append('\n')
+        for (s in samples) {
+            val cells = listOf(s.t, s.speed, s.rpm, s.gear, s.engineTemp, s.battery, s.throttle, s.odo, s.lat, s.lon, s.inj, s.mode)
+            append(cells.joinToString(",") { it?.toString() ?: "" }).append('\n')
+        }
+    }
+
+    fun parse(text: String): Pair<RideSummary, List<RideSample>> {
+        val meta = LinkedHashMap<String, String>()
+        val samples = ArrayList<RideSample>()
+        for (line in text.lineSequence()) {
+            when {
+                line.isBlank() -> Unit
+                line.startsWith("#") -> {
+                    val eq = line.indexOf('=')
+                    if (eq > 1) meta[line.substring(1, eq)] = line.substring(eq + 1)
+                }
+                line.startsWith("t,") -> Unit
+                else -> parseRow(line)?.let { samples += it }
+            }
+        }
+        return summaryOf(meta) to samples
+    }
+
+    fun parseRow(line: String): RideSample? {
+        val c = line.split(',')
+        if (c.size < 10) return null
+        val t = c[0].toLongOrNull() ?: return null
+        return RideSample(
+            t = t,
+            speed = c[1].toIntOrNull(),
+            rpm = c[2].toIntOrNull(),
+            gear = c[3].toIntOrNull(),
+            engineTemp = c[4].toIntOrNull(),
+            battery = c[5].toFloatOrNull(),
+            throttle = c[6].toIntOrNull(),
+            odo = c[7].toDoubleOrNull(),
+            lat = c[8].toDoubleOrNull(),
+            lon = c[9].toDoubleOrNull(),
+            inj = c.getOrNull(10)?.toLongOrNull(),
+            mode = c.getOrNull(11)?.toIntOrNull(),
+        )
+    }
+
+    fun metaOf(s: RideSummary): Map<String, String> = linkedMapOf(
+        "v" to "1",
+        "id" to s.id,
+        "start" to s.start.toString(),
+        "end" to s.end.toString(),
+        "bike" to s.bike.replace('\n', ' '),
+        "distanceKm" to s.distanceKm.toString(),
+        "durationS" to s.durationS.toString(),
+        "movingS" to s.movingS.toString(),
+        "idleS" to s.idleS.toString(),
+        "avgSpeed" to s.avgSpeed.toString(),
+        "maxSpeed" to s.maxSpeed.toString(),
+        "avgRpm" to s.avgRpm.toString(),
+        "maxRpm" to s.maxRpm.toString(),
+        "maxEngineTemp" to (s.maxEngineTemp?.toString() ?: ""),
+        "minBattery" to (s.minBattery?.toString() ?: ""),
+        "maxBattery" to (s.maxBattery?.toString() ?: ""),
+        "fuelL" to (s.fuelL?.toString() ?: ""),
+        "mileageKmpl" to (s.mileageKmpl?.toString() ?: ""),
+        "gears" to s.gearSeconds.entries.sortedBy { it.key }.joinToString(";") { "${it.key}:${it.value}" },
+        "hasRoute" to s.hasRoute.toString(),
+        "injCounts" to s.injCounts.toString(),
+        "overRevS" to s.overRevS.toString(),
+        "harshAccel" to s.harshAccel.toString(),
+        "hardBrake" to s.hardBrake.toString(),
+        "warmupS" to (s.warmupS?.toString() ?: ""),
+        "avgThrottle" to s.avgThrottle.toString(),
+        "smoothness" to s.smoothness.toString(),
+        "modes" to s.modeSeconds.entries.sortedBy { it.key }.joinToString(";") { "${it.key}:${it.value}" },
+    )
+
+    fun summaryOf(m: Map<String, String>): RideSummary = RideSummary(
+        id = m["id"] ?: "",
+        start = m["start"]?.toLongOrNull() ?: 0,
+        end = m["end"]?.toLongOrNull() ?: 0,
+        bike = m["bike"] ?: "",
+        distanceKm = m["distanceKm"]?.toDoubleOrNull() ?: 0.0,
+        durationS = m["durationS"]?.toLongOrNull() ?: 0,
+        movingS = m["movingS"]?.toLongOrNull() ?: 0,
+        idleS = m["idleS"]?.toLongOrNull() ?: 0,
+        avgSpeed = m["avgSpeed"]?.toDoubleOrNull() ?: 0.0,
+        maxSpeed = m["maxSpeed"]?.toIntOrNull() ?: 0,
+        avgRpm = m["avgRpm"]?.toIntOrNull() ?: 0,
+        maxRpm = m["maxRpm"]?.toIntOrNull() ?: 0,
+        maxEngineTemp = m["maxEngineTemp"]?.toIntOrNull(),
+        minBattery = m["minBattery"]?.toFloatOrNull(),
+        maxBattery = m["maxBattery"]?.toFloatOrNull(),
+        fuelL = m["fuelL"]?.toDoubleOrNull(),
+        mileageKmpl = m["mileageKmpl"]?.toIntOrNull(),
+        gearSeconds = (m["gears"] ?: "").split(';').mapNotNull { part ->
+            val kv = part.split(':')
+            val k = kv.getOrNull(0)?.toIntOrNull()
+            val v = kv.getOrNull(1)?.toLongOrNull()
+            if (k != null && v != null) k to v else null
+        }.toMap(),
+        hasRoute = m["hasRoute"] == "true",
+        injCounts = m["injCounts"]?.toLongOrNull() ?: 0L,
+        overRevS = m["overRevS"]?.toLongOrNull() ?: 0L,
+        harshAccel = m["harshAccel"]?.toIntOrNull() ?: 0,
+        hardBrake = m["hardBrake"]?.toIntOrNull() ?: 0,
+        warmupS = m["warmupS"]?.toLongOrNull(),
+        avgThrottle = m["avgThrottle"]?.toIntOrNull() ?: 0,
+        smoothness = m["smoothness"]?.toIntOrNull() ?: 0,
+        modeSeconds = pairs(m["modes"]),
+    )
+
+    private fun pairs(s: String?): Map<Int, Long> = (s ?: "").split(';').mapNotNull { part ->
+        val kv = part.split(':')
+        val k = kv.getOrNull(0)?.toIntOrNull()
+        val v = kv.getOrNull(1)?.toLongOrNull()
+        if (k != null && v != null) k to v else null
+    }.toMap()
+}
+
+/** GPX 1.1 track, readable by Google Earth, Strava, OsmAnd and most map tools. */
+object RideGpx {
+    fun build(name: String, samples: List<RideSample>): String {
+        val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+        return buildString {
+            append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+            append("<gpx version=\"1.1\" creator=\"Bike Companion\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n")
+            append("  <trk><name>").append(name.replace("&", "and").replace("<", "").replace(">", "")).append("</name><trkseg>\n")
+            for (s in samples) {
+                if (s.lat == null || s.lon == null) continue
+                append("    <trkpt lat=\"").append(s.lat).append("\" lon=\"").append(s.lon).append("\"><time>")
+                append(iso.format(Date(s.t))).append("</time></trkpt>\n")
+            }
+            append("  </trkseg></trk>\n</gpx>\n")
+        }
+    }
+}

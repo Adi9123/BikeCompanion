@@ -1,18 +1,18 @@
 <div align="center">
 
-# RTR Companion
+# Bike Companion
 
 **An independent Android companion app for TVS Apache motorcycles with SmartXonnect.**
 Live dashboard, ride recording and reports, fuel and service tracking, and
 Google Maps directions on your bike's cluster. No account, no cloud.
 
-[![Build](https://github.com/Adi9123/RTRCompanion/actions/workflows/build.yml/badge.svg)](https://github.com/Adi9123/RTRCompanion/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/Adi9123/RTRCompanion?label=latest)](https://github.com/Adi9123/RTRCompanion/releases/latest)
+[![Build](https://github.com/Adi9123/BikeCompanion/actions/workflows/build.yml/badge.svg)](https://github.com/Adi9123/BikeCompanion/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/Adi9123/BikeCompanion?label=latest)](https://github.com/Adi9123/BikeCompanion/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-### [⬇ Download the latest APK](https://github.com/Adi9123/RTRCompanion/releases/latest/download/RTRCompanion.apk)
+### [⬇ Download the latest APK](https://github.com/Adi9123/BikeCompanion/releases/latest/download/BikeCompanion.apk)
 
-[All releases](https://github.com/Adi9123/RTRCompanion/releases) · [Changelog](CHANGELOG.md) · [Protocol notes](docs/PROTOCOL.md)
+[All releases](https://github.com/Adi9123/BikeCompanion/releases) · [Changelog](CHANGELOG.md) · [Protocol notes](docs/PROTOCOL.md)
 
 </div>
 
@@ -79,7 +79,7 @@ If you try it on another model, a shared log helps: see [Contributing](#contribu
 
 ## Install
 
-1. [Download the APK](https://github.com/Adi9123/RTRCompanion/releases/latest/download/RTRCompanion.apk)
+1. [Download the APK](https://github.com/Adi9123/BikeCompanion/releases/latest/download/BikeCompanion.apk)
    on an Android phone (Android 8.0 or newer).
 2. Open it and allow **Install unknown apps** when asked.
 3. Allow Bluetooth, location and notifications on first launch.
@@ -161,7 +161,7 @@ From then on fuel used, fuel left and range are measured, not estimated.
 ## Code layout
 
 ```
-app/src/main/java/dev/rtrcompanion/
+app/src/main/java/dev/bikecompanion/
   protocol/   frame codec, scramble detection, Apache field table, navigation and text frames
   link/       Bluetooth scanner, GATT link, foreground service, phone status
   nav/        notification reader: Google Maps, calls, messages, music
@@ -260,7 +260,7 @@ This is a summary for contributors and users, **not legal advice**.
 
 Copyright © 2026 Aditya Shinde
 
-RTR Companion is free software: you can redistribute it and/or modify it under
+Bike Companion is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free Software
 Foundation, either version 3 of the License, or (at your option) any later
 version. It is distributed in the hope that it will be useful, but **without

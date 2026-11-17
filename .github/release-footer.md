@@ -1,6 +1,6 @@
 ## Install
 
-1. Download **RTRCompanion.apk** below (both APK files are the same build; the
+1. Download **BikeCompanion.apk** below (both APK files are the same build; the
    versioned one is for keeping old versions).
 2. Open it on your Android phone (Android 8.0 or newer) and allow
    **Install unknown apps** when asked.
