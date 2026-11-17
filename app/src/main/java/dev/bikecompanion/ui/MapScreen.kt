@@ -125,7 +125,7 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
             setMultiTouchControls(true)
             isTilesScaledToDpi = true
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-            overlayManager.tilesOverlay.setColorFilter(TilesOverlay.INVERT_COLORS)
+            overlayManager.tilesOverlay.setColorFilter(if (Tone.isDark) TilesOverlay.INVERT_COLORS else null)
             // Never start in the ocean at 0,0: begin on India until something better is known.
             controller.setZoom(5.0)
             controller.setCenter(FALLBACK)
@@ -136,7 +136,7 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
     val meMarker = remember { Marker(map).apply { setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER); title = "You" } }
     val track = remember {
         Polyline(map).apply {
-            outlinePaint.color = Tone.Red.toArgb()
+            outlinePaint.color = (if (Tone.isDark) Tone.Accent else Tone.AccentText).toArgb()
             outlinePaint.strokeWidth = 12f
             outlinePaint.strokeCap = Paint.Cap.ROUND
         }

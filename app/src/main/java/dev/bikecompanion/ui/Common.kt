@@ -283,3 +283,53 @@ fun duration(seconds: Long): String {
     val s = seconds % 60
     return if (h > 0) String.format(Locale.US, "%dh %02dm", h, m) else String.format(Locale.US, "%dm %02ds", m, s)
 }
+
+/**
+ * Segmented control. The selected capsule slides to its new place on a fork
+ * spring, so the eye follows the change rather than seeing a jump.
+ */
+@Composable
+fun Segmented(options: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
+    val pos by androidx.compose.animation.core.animateFloatAsState(
+        selected.toFloat(),
+        if (Motion.reduced) androidx.compose.animation.core.tween(0) else Springs.fork(),
+        label = "segment",
+    )
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier
+            .fillMaxWidth()
+            .height(46.dp)
+            .clip(Shapes.control)
+            .background(Tone.Panel2)
+            .padding(4.dp),
+    ) {
+        val cell = maxWidth / options.size
+        Box(
+            Modifier
+                .padding(start = cell * pos)
+                .width(cell)
+                .height(38.dp)
+                .shadow(if (Tone.isDark) 0.dp else 3.dp, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (Tone.isDark) Tone.Line else Tone.Panel),
+        )
+        Row(Modifier.fillMaxWidth().height(38.dp)) {
+            options.forEachIndexed { i, label ->
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .pressable(scale = 0.95f) { onSelect(i) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (i == selected) Tone.Text else Tone.Muted,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+    }
+}

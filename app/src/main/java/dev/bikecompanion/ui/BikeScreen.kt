@@ -194,7 +194,17 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Space.gutter),
     ) {
-        Text("More", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 16.dp))
+        ScreenTitle("Settings")
+
+        // ------------------------------------------------------- appearance
+        SectionTitle("Appearance")
+        Panel(Modifier.fillMaxWidth()) {
+            val modes = listOf("system", "light", "dark")
+            Text("Theme", style = MaterialTheme.typography.titleMedium)
+            Text("Light reads best in sunlight; dark is easier at night.", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
+            Spacer(Modifier.height(12.dp))
+            Segmented(listOf("Phone", "Light", "Dark"), modes.indexOf(Appearance.mode).coerceAtLeast(0)) { Appearance.set(modes[it]) }
+        }
 
         // ------------------------------------------------------- bike
         SectionTitle("Bike")

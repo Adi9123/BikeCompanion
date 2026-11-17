@@ -89,7 +89,7 @@ private fun RideList(onOpen: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text("Rides", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 16.dp))
+            ScreenTitle("Rides")
             if (list != null && list.isNotEmpty()) {
                 val total = list.sumOf { it.distanceKm }
                 Text(

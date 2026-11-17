@@ -59,7 +59,7 @@ fun RouteMap(samples: List<RideSample>, modifier: Modifier = Modifier) {
             setMultiTouchControls(true)
             isTilesScaledToDpi = true
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-            overlayManager.tilesOverlay.setColorFilter(TilesOverlay.INVERT_COLORS)
+            overlayManager.tilesOverlay.setColorFilter(if (Tone.isDark) TilesOverlay.INVERT_COLORS else null)
             controller.setZoom(14.0)
         }
     }

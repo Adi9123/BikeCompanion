@@ -68,10 +68,11 @@ import java.util.Locale
 fun GarageScreen() {
     var sub by rememberSaveable { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = sub, containerColor = Tone.Bg, contentColor = Tone.Text) {
-            listOf("Fuel", "Service", "Battery", "Stats").forEachIndexed { i, t ->
-                Tab(selected = sub == i, onClick = { sub = i }, text = { Text(t) })
-            }
+        Column(Modifier.padding(horizontal = Space.gutter)) {
+            ScreenTitle("Garage", "Fuel, service and the health of your bike")
+            Spacer(Modifier.height(14.dp))
+            Segmented(listOf("Fuel", "Service", "Battery", "Stats"), sub) { sub = it }
+            Spacer(Modifier.height(4.dp))
         }
         when (sub) {
             0 -> FuelScreen()
