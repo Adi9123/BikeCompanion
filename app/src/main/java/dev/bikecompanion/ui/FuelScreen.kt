@@ -114,37 +114,37 @@ fun FuelScreen() {
     }
 
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        Modifier.fillMaxSize().padding(horizontal = Space.gutter),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             Spacer(Modifier.height(4.dp))
-            Panel(Modifier.fillMaxWidth(), color = if (status.onReserve) Rtr.RedDeep else Rtr.Panel) {
-                Text("FUEL LEFT", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+            Panel(Modifier.fillMaxWidth(), color = if (status.onReserve) Tone.RedDeep else Tone.Panel) {
+                Text("FUEL LEFT", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         status.litresLeft?.let { (if (status.measured) "" else "≈ ") + litres(it) } ?: "—",
                         fontSize = 44.sp,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text(" / ${litres(Prefs.tankLitres)} l", color = Rtr.Muted, modifier = Modifier.padding(bottom = 8.dp))
+                    Text(" / ${litres(Prefs.tankLitres)} l", color = Tone.Muted, modifier = Modifier.padding(bottom = 8.dp))
                     Spacer(Modifier.weight(1f))
-                    if (status.onReserve) Pill("Reserve", Rtr.Red)
+                    if (status.onReserve) Pill("Reserve", Tone.Red)
                 }
                 Spacer(Modifier.height(8.dp))
                 FuelBars(readings["fuel"]?.raw?.toInt(), Prefs.fuelBars)
                 Spacer(Modifier.height(12.dp))
                 Row {
                     Column(Modifier.weight(1f)) {
-                        Text("RANGE", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                        Text("RANGE", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                         Text(status.rangeKm?.let { "≈ ${it.toInt()} km" } ?: "—", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("SOURCE", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                        Text("SOURCE", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                         Text(
                             if (status.measured) "Fuel counter" else "Gauge bars",
                             fontWeight = FontWeight.SemiBold,
-                            color = if (status.measured) Rtr.Green else Rtr.Amber,
+                            color = if (status.measured) Tone.Green else Tone.Amber,
                         )
                     }
                 }
@@ -154,12 +154,12 @@ fun FuelScreen() {
         }
         item {
             TileRow { m ->
-                StatTile("Real mileage", FuelMath.averageMileage(tanks)?.let { String.format(Locale.US, "%.1f", it) } ?: "—", "km/l", m, Rtr.Green)
+                StatTile("Real mileage", FuelMath.averageMileage(tanks)?.let { String.format(Locale.US, "%.1f", it) } ?: "—", "km/l", m, Tone.Green)
                 StatTile("Last tank", tanks.lastOrNull()?.let { String.format(Locale.US, "%.1f", it.kmpl) } ?: "—", "km/l", m)
             }
             Spacer(Modifier.height(10.dp))
             TileRow { m ->
-                StatTile("Cost per km", FuelMath.averageCostPerKm(tanks)?.let { "₹" + String.format(Locale.US, "%.2f", it) } ?: "—", "", m, Rtr.Amber)
+                StatTile("Cost per km", FuelMath.averageCostPerKm(tanks)?.let { "₹" + String.format(Locale.US, "%.2f", it) } ?: "—", "", m, Tone.Amber)
                 StatTile("This month", rupees(spentMonth), "", m)
             }
             Spacer(Modifier.height(10.dp))
@@ -171,7 +171,7 @@ fun FuelScreen() {
         item {
             Panel(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Dot(if (calibration != null) Rtr.Green else Rtr.Amber, 10)
+                    Dot(if (calibration != null) Tone.Green else Tone.Amber, 10)
                     Spacer(Modifier.width(10.dp))
                     Text(
                         if (calibration != null) "Fuel counter calibrated" else "Fuel counter not calibrated yet",
@@ -189,7 +189,7 @@ fun FuelScreen() {
                             "measuring fuel per ride. Until then, fuel left is estimated from the gauge."
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
             }
         }
@@ -200,14 +200,14 @@ fun FuelScreen() {
                 Panel(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(dateOf(r.t), style = MaterialTheme.typography.labelLarge, color = Rtr.Muted)
+                            Text(dateOf(r.t), style = MaterialTheme.typography.labelLarge, color = Tone.Muted)
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(litres(r.litres), fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                                Text(" l", color = Rtr.Muted, modifier = Modifier.padding(bottom = 3.dp))
+                                Text(" l", color = Tone.Muted, modifier = Modifier.padding(bottom = 3.dp))
                                 Spacer(Modifier.width(12.dp))
                                 r.price?.let { Text(rupees(it), fontWeight = FontWeight.SemiBold) }
                                 if (r.price != null && r.litres > 0) {
-                                    Text("  ${rupees(r.price / r.litres)}/l", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+                                    Text("  ${rupees(r.price / r.litres)}/l", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
                                 }
                             }
                             Text(
@@ -217,11 +217,11 @@ fun FuelScreen() {
                                     tank?.let { String.format(Locale.US, "%.1f km/l over %.0f km", it.kmpl, it.km) },
                                 ).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Rtr.Muted,
+                                color = Tone.Muted,
                             )
                         }
                         IconButton(onClick = { deleting = r }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Rtr.Muted)
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Tone.Muted)
                         }
                     }
                 }
@@ -232,7 +232,7 @@ fun FuelScreen() {
                 "Tank ${litres(Prefs.tankLitres)} l including ${litres(Prefs.reserveLitres)} l reserve, ${Prefs.fuelBars}-bar gauge. " +
                     "Real mileage is worked out from full tank to full tank.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Rtr.Muted,
+                color = Tone.Muted,
             )
             Spacer(Modifier.height(24.dp))
         }
@@ -248,10 +248,10 @@ fun FuelBars(bars: Int?, total: Int) {
         for (i in 1..total) {
             val on = bars != null && i <= bars
             val color = when {
-                !on -> Rtr.Panel2
-                (bars ?: 0) <= 1 -> Rtr.Red
-                (bars ?: 0) <= 2 -> Rtr.Amber
-                else -> Rtr.Green
+                !on -> Tone.Panel2
+                (bars ?: 0) <= 1 -> Tone.Red
+                (bars ?: 0) <= 2 -> Tone.Amber
+                else -> Tone.Green
             }
             Box(
                 Modifier
@@ -311,7 +311,7 @@ fun AddRefuelDialog(onDismiss: () -> Unit) {
                 Text(
                     "Mark full only if the tank was filled to the top; mileage is measured between full fills.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
             }
         },

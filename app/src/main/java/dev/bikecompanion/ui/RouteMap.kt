@@ -36,10 +36,10 @@ object MapSetup {
 
 /** Colour of a route segment by speed. */
 private fun speedColor(speed: Int) = when {
-    speed < 20 -> Rtr.Teal
-    speed < 40 -> Rtr.Green
-    speed < 60 -> Rtr.Amber
-    else -> Rtr.Red
+    speed < 20 -> Tone.Teal
+    speed < 40 -> Tone.Green
+    speed < 60 -> Tone.Amber
+    else -> Tone.Red
 }
 
 /**

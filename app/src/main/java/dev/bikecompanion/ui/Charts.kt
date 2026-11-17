@@ -68,13 +68,13 @@ fun LineChart(
                 Text(
                     "avg ${formatY(avg)} · max ${formatY(peak)} $unit",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
             }
         }
         Spacer(Modifier.height(12.dp))
         if (points.size < 2) {
-            Text("Not enough data", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+            Text("Not enough data", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
             return@Panel
         }
         val data = downsample(points)
@@ -89,7 +89,7 @@ fun LineChart(
             )
             for (i in 0..3) {
                 val y = size.height * i / 3f
-                drawLine(Rtr.Line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                drawLine(Tone.Line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
             }
             val line = Path()
             data.forEachIndexed { i, p ->
@@ -106,8 +106,8 @@ fun LineChart(
             drawPath(line, color, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
-            Text("0:00", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted, modifier = Modifier.weight(1f))
-            Text(duration(points.last().x.toLong()), style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+            Text("0:00", style = MaterialTheme.typography.labelSmall, color = Tone.Muted, modifier = Modifier.weight(1f))
+            Text(duration(points.last().x.toLong()), style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
         }
     }
 }
@@ -138,7 +138,7 @@ fun GearBars(gearSeconds: Map<Int, Long>, modifier: Modifier = Modifier) {
         Text("Time in each gear", fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(10.dp))
         if (gearSeconds.isEmpty()) {
-            Text("No gear data", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+            Text("No gear data", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
             return@Panel
         }
         for (g in 0..6) {
@@ -152,20 +152,20 @@ fun GearBars(gearSeconds: Map<Int, Long>, modifier: Modifier = Modifier) {
                         .weight(1f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(Rtr.Panel2),
+                        .background(Tone.Panel2),
                 ) {
                     Box(
                         Modifier
                             .fillMaxWidth(frac)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Brush.horizontalGradient(listOf(Rtr.Teal, Rtr.Blue))),
+                            .background(Brush.horizontalGradient(listOf(Tone.Teal, Tone.Blue))),
                     )
                 }
                 Text(
                     String.format(Locale.US, "%3.0f%%", frac * 100),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                     modifier = Modifier.width(52.dp).padding(start = 8.dp),
                 )
             }

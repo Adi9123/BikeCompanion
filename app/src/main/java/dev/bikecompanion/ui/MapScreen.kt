@@ -136,7 +136,7 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
     val meMarker = remember { Marker(map).apply { setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER); title = "You" } }
     val track = remember {
         Polyline(map).apply {
-            outlinePaint.color = Rtr.Red.toArgb()
+            outlinePaint.color = Tone.Red.toArgb()
             outlinePaint.strokeWidth = 12f
             outlinePaint.strokeCap = Paint.Cap.ROUND
         }
@@ -248,14 +248,14 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
         AndroidView(factory = { map }, modifier = Modifier.fillMaxSize())
 
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
-            Panel(Modifier.fillMaxWidth(), color = Rtr.Panel.copy(alpha = 0.92f)) {
+            Panel(Modifier.fillMaxWidth(), color = Tone.Panel.copy(alpha = 0.92f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("SPEED", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                        Text("SPEED", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                         Text(readings["speed"]?.raw?.let { "$it km/h" } ?: "—", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                     }
                     Column(Modifier.weight(1f)) {
-                        Text("RIDE", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                        Text("RIDE", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                         Text(
                             if (rec.phase == RecPhase.IDLE) "Not recording" else "${km(rec.distanceKm)} km",
                             fontWeight = FontWeight.SemiBold,
@@ -267,7 +267,7 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
                     Text(
                         "${it.maneuver.label} · ${it.distanceToTurnM?.let { d -> formatDistance(d) } ?: "—"}",
                         fontWeight = FontWeight.Bold,
-                        color = Rtr.Amber,
+                        color = Tone.Amber,
                     )
                 }
             }
@@ -278,9 +278,9 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (!online) {
-                Panel(Modifier.fillMaxWidth(), color = Rtr.RedDeep) {
+                Panel(Modifier.fillMaxWidth(), color = Tone.RedDeep) {
                     Text("No internet: map tiles can't load.", fontWeight = FontWeight.SemiBold)
-                    Text("Areas you have viewed before still show from the cache.", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+                    Text("Areas you have viewed before still show from the cache.", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
                 }
             }
             if (!granted) {
@@ -290,18 +290,18 @@ fun MapScreen(onRequestPermissions: () -> Unit) {
                     Button(onClick = onRequestPermissions) { Text("Allow location") }
                 }
             } else if (me == null) {
-                Panel(Modifier.fillMaxWidth(), color = Rtr.Panel.copy(alpha = 0.92f)) {
+                Panel(Modifier.fillMaxWidth(), color = Tone.Panel.copy(alpha = 0.92f)) {
                     Text("Finding your location…", fontWeight = FontWeight.SemiBold)
                     Text(
                         "Make sure Location is switched on in quick settings. GPS can take a minute indoors.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Rtr.Muted,
+                        color = Tone.Muted,
                     )
                 }
             }
             parked?.let { p ->
-                Panel(Modifier.fillMaxWidth(), color = Rtr.Panel.copy(alpha = 0.92f)) {
-                    Text("BIKE PARKED", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                Panel(Modifier.fillMaxWidth(), color = Tone.Panel.copy(alpha = 0.92f)) {
+                    Text("BIKE PARKED", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                     Text(
                         SimpleDateFormat("EEE d MMM · h:mm a", Locale.getDefault()).format(Date(p.at)),
                         fontWeight = FontWeight.SemiBold,

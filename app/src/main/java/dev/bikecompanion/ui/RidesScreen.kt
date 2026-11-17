@@ -85,7 +85,7 @@ private fun RideList(onOpen: (String) -> Unit) {
     val list = rides
 
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        Modifier.fillMaxSize().padding(horizontal = Space.gutter),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -95,27 +95,27 @@ private fun RideList(onOpen: (String) -> Unit) {
                 Text(
                     "${list.size} rides · ${km(total)} km recorded",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
             }
         }
         if (rec.phase != RecPhase.IDLE) {
             item {
-                Panel(Modifier.fillMaxWidth(), color = Rtr.RedDeep) {
+                Panel(Modifier.fillMaxWidth(), color = Tone.RedDeep) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Dot(if (rec.phase == RecPhase.RECORDING) Rtr.Red else Rtr.Amber, 10)
+                        Dot(if (rec.phase == RecPhase.RECORDING) Tone.Red else Tone.Amber, 10)
                         Spacer(Modifier.width(10.dp))
                         Text(
                             if (rec.phase == RecPhase.RECORDING) "Recording now" else "Paused · ${rec.reason}",
                             fontWeight = FontWeight.Bold,
                         )
                     }
-                    Text("${km(rec.distanceKm)} km so far · top ${rec.maxSpeed} km/h", color = Rtr.Muted)
+                    Text("${km(rec.distanceKm)} km so far · top ${rec.maxSpeed} km/h", color = Tone.Muted)
                 }
             }
         }
         when {
-            list == null -> item { Text("Loading…", color = Rtr.Muted) }
+            list == null -> item { Text("Loading…", color = Tone.Muted) }
             list.isEmpty() -> item {
                 Panel(Modifier.fillMaxWidth()) {
                     Text("No rides yet", fontWeight = FontWeight.Bold)
@@ -124,7 +124,7 @@ private fun RideList(onOpen: (String) -> Unit) {
                         "Connect to the bike and ride. Rides are recorded automatically in the background and " +
                             "saved when you switch the key off. Allow location to see your route on the map.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Rtr.Muted,
+                        color = Tone.Muted,
                     )
                 }
             }
@@ -137,13 +137,13 @@ private fun RideList(onOpen: (String) -> Unit) {
 @Composable
 private fun RideCard(r: RideSummary, onClick: () -> Unit) {
     Panel(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick)) {
-        Text(dateLabel(r.start), style = MaterialTheme.typography.labelLarge, color = Rtr.Muted)
+        Text(dateLabel(r.start), style = MaterialTheme.typography.labelLarge, color = Tone.Muted)
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(km(r.distanceKm), fontSize = 34.sp, fontWeight = FontWeight.Bold)
-            Text(" km", color = Rtr.Muted, modifier = Modifier.padding(bottom = 6.dp))
+            Text(" km", color = Tone.Muted, modifier = Modifier.padding(bottom = 6.dp))
             Spacer(Modifier.weight(1f))
-            if (r.hasRoute) Pill("Route", Rtr.Teal)
+            if (r.hasRoute) Pill("Route", Tone.Teal)
         }
         Spacer(Modifier.height(8.dp))
         Row {
@@ -158,7 +158,7 @@ private fun RideCard(r: RideSummary, onClick: () -> Unit) {
 @Composable
 private fun Mini(label: String, value: String, modifier: Modifier) {
     Column(modifier) {
-        Text(label.uppercase(Locale.US), style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+        Text(label.uppercase(Locale.US), style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
         Text(value, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -214,7 +214,7 @@ private fun RideReport(id: String, onBack: () -> Unit) {
 
         val d = data
         if (d == null) {
-            Text("Loading…", color = Rtr.Muted, modifier = Modifier.padding(16.dp))
+            Text("Loading…", color = Tone.Muted, modifier = Modifier.padding(16.dp))
             return@Column
         }
         val (s, samples) = d
@@ -223,21 +223,21 @@ private fun RideReport(id: String, onBack: () -> Unit) {
             samples.mapNotNull { smp -> f(smp)?.let { ChartPoint((smp.t - t0) / 1000f, it) } }
 
         LazyColumn(
-            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(horizontal = Space.gutter),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Text(dateLabel(s.start), color = Rtr.Muted)
+                Text(dateLabel(s.start), color = Tone.Muted)
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(km(s.distanceKm), fontSize = 52.sp, fontWeight = FontWeight.Bold)
-                    Text(" km", color = Rtr.Muted, modifier = Modifier.padding(bottom = 10.dp))
+                    Text(" km", color = Tone.Muted, modifier = Modifier.padding(bottom = 10.dp))
                 }
-                Text("${duration(s.durationS)} total · ${duration(s.movingS)} moving", color = Rtr.Muted)
+                Text("${duration(s.durationS)} total · ${duration(s.movingS)} moving", color = Tone.Muted)
             }
             item {
                 TileRow { m ->
-                    StatTile("Avg speed", "${s.avgSpeed.toInt()}", "km/h", m, Rtr.Teal)
-                    StatTile("Top speed", "${s.maxSpeed}", "km/h", m, Rtr.Red)
+                    StatTile("Avg speed", "${s.avgSpeed.toInt()}", "km/h", m, Tone.Teal)
+                    StatTile("Top speed", "${s.maxSpeed}", "km/h", m, Tone.Red)
                 }
                 Spacer(Modifier.height(10.dp))
                 val lpc = FuelMath.calibration(refuels)
@@ -247,17 +247,17 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                 TileRow { m ->
                     StatTile(
                         if (measured != null) "Fuel used" else "Fuel used (est.)",
-                        fuel?.let { String.format(Locale.US, "%.2f", it) } ?: "—", "l", m, Rtr.Green,
+                        fuel?.let { String.format(Locale.US, "%.2f", it) } ?: "—", "l", m, Tone.Green,
                     )
                     StatTile(
                         "Mileage",
                         if (measured != null && measured > 0.0) String.format(Locale.US, "%.1f", s.distanceKm / measured) else (s.mileageKmpl?.toString() ?: "—"),
-                        "km/l", m, Rtr.Green,
+                        "km/l", m, Tone.Green,
                     )
                 }
                 Spacer(Modifier.height(10.dp))
                 TileRow { m ->
-                    StatTile("Fuel cost", if (fuel != null && perLitre != null) rupees(fuel * perLitre) else "—", "", m, Rtr.Amber)
+                    StatTile("Fuel cost", if (fuel != null && perLitre != null) rupees(fuel * perLitre) else "—", "", m, Tone.Amber)
                     StatTile(
                         "Cost per km",
                         if (fuel != null && perLitre != null && s.distanceKm > 0) "₹" + String.format(Locale.US, "%.2f", fuel * perLitre / s.distanceKm) else "—",
@@ -271,7 +271,7 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(10.dp))
                 TileRow { m ->
-                    StatTile("Max engine temp", s.maxEngineTemp?.toString() ?: "—", "°C", m, Rtr.Amber)
+                    StatTile("Max engine temp", s.maxEngineTemp?.toString() ?: "—", "°C", m, Tone.Amber)
                     StatTile(
                         "Battery",
                         if (s.minBattery != null && s.maxBattery != null) {
@@ -279,7 +279,7 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                         } else {
                             "—"
                         },
-                        "V", m, Rtr.Blue,
+                        "V", m, Tone.Blue,
                     )
                 }
                 Spacer(Modifier.height(10.dp))
@@ -298,10 +298,10 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Legend("< 20", Rtr.Teal)
-                            Legend("< 40", Rtr.Green)
-                            Legend("< 60", Rtr.Amber)
-                            Legend("60+ km/h", Rtr.Red)
+                            Legend("< 20", Tone.Teal)
+                            Legend("< 40", Tone.Green)
+                            Legend("< 60", Tone.Amber)
+                            Legend("60+ km/h", Tone.Red)
                         }
                     }
                 } else {
@@ -310,19 +310,19 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                         Text(
                             "GPS was off or location permission was not granted during this ride.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Rtr.Muted,
+                            color = Tone.Muted,
                         )
                     }
                 }
             }
             item { RidingStyle(s) }
-            item { LineChart("Speed", "km/h", series { it.speed?.toFloat() }, Rtr.Teal) }
-            item { LineChart("Engine speed", "rpm", series { it.rpm?.toFloat() }, Rtr.Red) }
-            item { LineChart("Throttle", "%", series { it.throttle?.toFloat() }, Rtr.Violet) }
-            item { LineChart("Engine temperature", "°C", series { it.engineTemp?.toFloat() }, Rtr.Amber, zeroBased = false) }
+            item { LineChart("Speed", "km/h", series { it.speed?.toFloat() }, Tone.Teal) }
+            item { LineChart("Engine speed", "rpm", series { it.rpm?.toFloat() }, Tone.Red) }
+            item { LineChart("Throttle", "%", series { it.throttle?.toFloat() }, Tone.Violet) }
+            item { LineChart("Engine temperature", "°C", series { it.engineTemp?.toFloat() }, Tone.Amber, zeroBased = false) }
             item {
                 LineChart(
-                    "Battery", "V", series { it.battery }, Rtr.Blue, zeroBased = false,
+                    "Battery", "V", series { it.battery }, Tone.Blue, zeroBased = false,
                     formatY = { String.format(Locale.US, "%.1f", it) },
                 )
             }
@@ -334,7 +334,7 @@ private fun RideReport(id: String, onBack: () -> Unit) {
                         "until then it is estimated from distance and the cluster's average mileage. " +
                         "Distance comes from the odometer, or GPS when the odometer was not available.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
                 Spacer(Modifier.height(24.dp))
             }
@@ -352,19 +352,19 @@ private fun ModeBars(modeSeconds: Map<Int, Long>) {
         modeSeconds.entries.sortedByDescending { it.value }.forEach { (mode, secs) ->
             val name = RideModes.name(mode, names)
             val color = when (name) {
-                "Sport" -> Rtr.Red
-                "Rain" -> Rtr.Blue
-                else -> Rtr.Teal
+                "Sport" -> Tone.Red
+                "Rain" -> Tone.Blue
+                else -> Tone.Teal
             }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
                 Text(name, modifier = Modifier.width(64.dp), fontWeight = FontWeight.SemiBold)
-                Box(Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(6.dp)).background(Rtr.Panel2)) {
+                Box(Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(6.dp)).background(Tone.Panel2)) {
                     Box(
                         Modifier.fillMaxWidth(secs.toFloat() / total).height(12.dp)
                             .clip(RoundedCornerShape(6.dp)).background(color),
                     )
                 }
-                Text(duration(secs), style = MaterialTheme.typography.bodySmall, color = Rtr.Muted, modifier = Modifier.padding(start = 8.dp))
+                Text(duration(secs), style = MaterialTheme.typography.bodySmall, color = Tone.Muted, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -374,9 +374,9 @@ private fun ModeBars(modeSeconds: Map<Int, Long>) {
 @Composable
 private fun RidingStyle(s: RideSummary) {
     val color = when {
-        s.smoothness >= 80 -> Rtr.Green
-        s.smoothness >= 60 -> Rtr.Amber
-        else -> Rtr.Red
+        s.smoothness >= 80 -> Tone.Green
+        s.smoothness >= 60 -> Tone.Amber
+        else -> Tone.Red
     }
     Panel(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -389,11 +389,11 @@ private fun RidingStyle(s: RideSummary) {
                         else -> "Aggressive: harsh throttle, hard braking or high revs"
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
             }
             Text("${s.smoothness}", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = color)
-            Text("/100", color = Rtr.Muted, modifier = Modifier.padding(start = 2.dp))
+            Text("/100", color = Tone.Muted, modifier = Modifier.padding(start = 2.dp))
         }
         Spacer(Modifier.height(10.dp))
         Row {
@@ -415,7 +415,7 @@ private fun Legend(text: String, color: androidx.compose.ui.graphics.Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Dot(color)
         Spacer(Modifier.width(4.dp))
-        Text(text, style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+        Text(text, style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
     }
 }
 

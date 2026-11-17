@@ -68,7 +68,7 @@ import java.util.Locale
 fun GarageScreen() {
     var sub by rememberSaveable { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = sub, containerColor = Rtr.Bg, contentColor = Rtr.Text) {
+        TabRow(selectedTabIndex = sub, containerColor = Tone.Bg, contentColor = Tone.Text) {
             listOf("Fuel", "Service", "Battery", "Stats").forEachIndexed { i, t ->
                 Tab(selected = sub == i, onClick = { sub = i }, text = { Text(t) })
             }
@@ -115,12 +115,12 @@ private fun ServiceScreen() {
     }
     if (adding) AddServiceDialog(odo, onDismiss = { adding = false }) { store.addLog(it); adding = false }
 
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = Space.gutter), verticalArrangement = Arrangement.spacedBy(Space.betweenCards)) {
         item {
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("ODOMETER", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                    Text("ODOMETER", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                     Text(odo?.let { "${km(it)} km" } ?: "—", fontSize = 26.sp, fontWeight = FontWeight.Bold)
                 }
                 Button(onClick = { adding = true }) { Text("Log service") }
@@ -129,7 +129,7 @@ private fun ServiceScreen() {
                 Text(
                     String.format(Locale.US, "Cluster service indicator: 0x%02X", it),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
             }
         }
@@ -137,10 +137,10 @@ private fun ServiceScreen() {
         items(items, key = { it.id }) { item ->
             val due = Maintenance.due(item, odo, now)
             val color = when (due.status) {
-                Due.DUE -> Rtr.Red
-                Due.SOON -> Rtr.Amber
-                Due.OK -> Rtr.Green
-                Due.UNKNOWN -> Rtr.Muted
+                Due.DUE -> Tone.Red
+                Due.SOON -> Tone.Amber
+                Due.OK -> Tone.Green
+                Due.UNKNOWN -> Tone.Muted
             }
             Panel(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +161,7 @@ private fun ServiceScreen() {
                                 else -> parts.joinToString(" · ")
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (due.status == Due.DUE) Rtr.Red else Rtr.Muted,
+                            color = if (due.status == Due.DUE) Tone.Red else Tone.Muted,
                         )
                     }
                     OutlinedButton(onClick = { editing = item }) { Text("Done") }
@@ -178,16 +178,16 @@ private fun ServiceScreen() {
                             Text(
                                 listOfNotNull(day(e.t), e.odo?.let { "${km(it)} km" }, e.cost?.let { rupees(it) }).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Rtr.Muted,
+                                color = Tone.Muted,
                             )
                         }
-                        IconButton(onClick = { store.deleteLog(e.t) }) { Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Rtr.Muted) }
+                        IconButton(onClick = { store.deleteLog(e.t) }) { Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Tone.Muted) }
                     }
                 }
             }
             item {
                 val total = log.sumOf { it.cost ?: 0.0 }
-                Text("Total spent on service: ${rupees(total)}", color = Rtr.Muted, modifier = Modifier.padding(bottom = 24.dp))
+                Text("Total spent on service: ${rupees(total)}", color = Tone.Muted, modifier = Modifier.padding(bottom = 24.dp))
             }
         }
     }
@@ -274,27 +274,27 @@ private fun BatteryScreen() {
     val readings by AppState.readings.collectAsState()
     val verdict = BatteryHealth.assess(records)
     fun color(h: Health) = when (h) {
-        Health.GOOD -> Rtr.Green
-        Health.FAIR -> Rtr.Amber
-        Health.WEAK -> Rtr.Red
-        Health.UNKNOWN -> Rtr.Muted
+        Health.GOOD -> Tone.Green
+        Health.FAIR -> Tone.Amber
+        Health.WEAK -> Tone.Red
+        Health.UNKNOWN -> Tone.Muted
     }
 
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = Space.gutter), verticalArrangement = Arrangement.spacedBy(Space.betweenCards)) {
         item {
             Spacer(Modifier.height(8.dp))
             Panel(Modifier.fillMaxWidth()) {
-                Text("BATTERY NOW", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                Text("BATTERY NOW", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                 Text(
                     readings["battery"]?.raw?.let { String.format(Locale.US, "%.1f V", it / 10.0) } ?: "—",
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Rtr.Blue,
+                    color = Tone.Blue,
                 )
                 Text(
                     "About 12.4–12.8 V with the engine off, 13.5–14.8 V while running means all is well.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Rtr.Muted,
+                    color = Tone.Muted,
                 )
             }
         }
@@ -313,7 +313,7 @@ private fun BatteryScreen() {
                         "Nothing yet. Each time you switch on and start with the app connected, it records the resting " +
                             "voltage, the dip while starting and the charging voltage.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Rtr.Muted,
+                        color = Tone.Muted,
                     )
                 } else {
                     verdict.notes.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
@@ -326,14 +326,14 @@ private fun BatteryScreen() {
                 LineChart(
                     "Resting voltage", "V",
                     sorted.mapIndexedNotNull { i, r -> r.resting?.let { ChartPoint(i.toFloat(), it) } },
-                    Rtr.Blue, zeroBased = false, formatY = { String.format(Locale.US, "%.1f", it) },
+                    Tone.Blue, zeroBased = false, formatY = { String.format(Locale.US, "%.1f", it) },
                 )
             }
             item {
                 LineChart(
                     "Charging voltage", "V",
                     sorted.mapIndexedNotNull { i, r -> r.charging?.let { ChartPoint(i.toFloat(), it) } },
-                    Rtr.Teal, zeroBased = false, formatY = { String.format(Locale.US, "%.1f", it) },
+                    Tone.Teal, zeroBased = false, formatY = { String.format(Locale.US, "%.1f", it) },
                 )
             }
         }
@@ -341,7 +341,7 @@ private fun BatteryScreen() {
             Text(
                 "${records.size} key-ons recorded. Graphs are across key-ons, oldest on the left.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Rtr.Muted,
+                color = Tone.Muted,
                 modifier = Modifier.padding(bottom = 24.dp),
             )
         }
@@ -363,7 +363,7 @@ private fun StatsScreen() {
         set(Calendar.DAY_OF_MONTH, 1); set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0)
     }.timeInMillis
 
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = Space.gutter), verticalArrangement = Arrangement.spacedBy(Space.betweenCards)) {
         item { Spacer(Modifier.height(8.dp)); PeriodPanel("This week", weekStart, rides, refuels) }
         item { PeriodPanel("This month", monthStart, rides, refuels) }
         item { PeriodPanel("All time", 0L, rides, refuels) }
@@ -384,26 +384,26 @@ private fun StatsScreen() {
                     days.forEachIndexed { i, v ->
                         val h = v / max * size.height
                         drawRoundRect(
-                            color = if (i == days.size - 1) Rtr.Red else Rtr.Teal,
+                            color = if (i == days.size - 1) Tone.Red else Tone.Teal,
                             topLeft = Offset(i * w + w * 0.15f, size.height - h),
                             size = Size(w * 0.7f, h.coerceAtLeast(2f)),
                             cornerRadius = CornerRadius(6f, 6f),
                         )
                     }
                 }
-                Text("Today is on the right, in red.", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                Text("Today is on the right, in red.", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
             }
         }
         if (rides.isNotEmpty()) {
             item {
                 SectionTitle("Records")
                 TileRow { m ->
-                    StatTile("Top speed", "${rides.maxOf { it.maxSpeed }}", "km/h", m, Rtr.Red)
+                    StatTile("Top speed", "${rides.maxOf { it.maxSpeed }}", "km/h", m, Tone.Red)
                     StatTile("Longest ride", km(rides.maxOf { it.distanceKm }), "km", m)
                 }
                 Spacer(Modifier.height(10.dp))
                 TileRow { m ->
-                    StatTile("Smoothest", "${rides.maxOf { it.smoothness }}", "/100", m, Rtr.Green)
+                    StatTile("Smoothest", "${rides.maxOf { it.smoothness }}", "/100", m, Tone.Green)
                     StatTile("Since", day(rides.minOf { it.start }), "", m)
                 }
                 Spacer(Modifier.height(24.dp))
@@ -419,22 +419,22 @@ private fun PeriodPanel(title: String, from: Long, rides: List<RideSummary>, ref
     val time = rs.sumOf { it.movingS }
     val spent = refuels.filter { it.t >= from }.sumOf { it.price ?: 0.0 }
     Panel(Modifier.fillMaxWidth()) {
-        Text(title.uppercase(Locale.US), style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+        Text(title.uppercase(Locale.US), style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
         Row(verticalAlignment = Alignment.Bottom) {
             Text(km(dist), fontSize = 32.sp, fontWeight = FontWeight.Bold)
-            Text(" km", color = Rtr.Muted, modifier = Modifier.padding(bottom = 5.dp))
+            Text(" km", color = Tone.Muted, modifier = Modifier.padding(bottom = 5.dp))
         }
         Row {
             Column(Modifier.weight(1f)) {
-                Text("RIDES", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                Text("RIDES", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                 Text("${rs.size}", fontWeight = FontWeight.SemiBold)
             }
             Column(Modifier.weight(1f)) {
-                Text("RIDING", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                Text("RIDING", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                 Text(duration(time), fontWeight = FontWeight.SemiBold)
             }
             Column(Modifier.weight(1f)) {
-                Text("FUEL", style = MaterialTheme.typography.labelSmall, color = Rtr.Muted)
+                Text("FUEL", style = MaterialTheme.typography.labelSmall, color = Tone.Muted)
                 Text(rupees(spent), fontWeight = FontWeight.SemiBold)
             }
         }

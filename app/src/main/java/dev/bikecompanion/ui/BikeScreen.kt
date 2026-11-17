@@ -116,7 +116,7 @@ private fun SubPage(title: String, onBack: () -> Unit, content: @Composable Colu
     Column(Modifier.fillMaxSize()) {
         PageHeader(title, onBack)
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Space.gutter),
             content = {
                 content()
                 Spacer(Modifier.height(24.dp))
@@ -138,9 +138,9 @@ private fun NavRow(title: String, subtitle: String, onClick: () -> Unit) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Rtr.Muted)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Tone.Muted)
     }
 }
 
@@ -149,7 +149,7 @@ private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChang
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
         }
         Spacer(Modifier.width(8.dp))
         Switch(checked = checked, onCheckedChange = onChange)
@@ -157,7 +157,7 @@ private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChang
 }
 
 @Composable
-private fun Divider() = HorizontalDivider(color = Rtr.Line, modifier = Modifier.padding(vertical = 2.dp))
+private fun Divider() = HorizontalDivider(color = Tone.Line, modifier = Modifier.padding(vertical = 2.dp))
 
 // ---------------------------------------------------------------- main
 
@@ -192,7 +192,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
     }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = Space.gutter),
     ) {
         Text("More", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 16.dp))
 
@@ -207,7 +207,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
                     Text(
                         link.phase.label + if (link.detail.isNotBlank()) " · ${link.detail}" else "",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Rtr.Muted,
+                        color = Tone.Muted,
                     )
                 }
             }
@@ -230,7 +230,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
             }
             if (!permissionsGranted) {
                 Spacer(Modifier.height(8.dp))
-                Text("Bluetooth permission is needed.", color = Rtr.Amber)
+                Text("Bluetooth permission is needed.", color = Tone.Amber)
                 TextButton(onClick = onRequestPermissions) { Text("Grant permissions") }
             }
         }
@@ -239,7 +239,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
         SectionTitle("On the cluster")
         Panel(Modifier.fillMaxWidth()) {
             if (!notificationAccess) {
-                Text("Directions, calls and messages need notification access.", color = Rtr.Amber)
+                Text("Directions, calls and messages need notification access.", color = Tone.Amber)
                 TextButton(onClick = { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }) {
                     Text("Allow notification access")
                 }
@@ -312,7 +312,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
             }
             if (!Perms.locationGranted(ctx)) {
                 Spacer(Modifier.height(6.dp))
-                Text("Location is off, so rides are recorded without a route.", color = Rtr.Amber, style = MaterialTheme.typography.bodySmall)
+                Text("Location is off, so rides are recorded without a route.", color = Tone.Amber, style = MaterialTheme.typography.bodySmall)
                 TextButton(onClick = onRequestPermissions) { Text("Allow location") }
             }
         }
@@ -351,7 +351,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
             "Bike Companion talks to the bike directly over Bluetooth. Internet is used only for map tiles; " +
                 "nothing about you or your bike is uploaded. It never sends calibration or vehicle-setting commands.",
             style = MaterialTheme.typography.bodySmall,
-            color = Rtr.Muted,
+            color = Tone.Muted,
         )
         Spacer(Modifier.height(24.dp))
     }
@@ -369,7 +369,7 @@ private fun InfoSwitchPage(openLearn: () -> Unit) {
             Text(
                 "The bike reports the switch as one bit in its data. Run the switch learner once with the bike on, " +
                     "and hold the Info switch when it asks.",
-                style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+                style = MaterialTheme.typography.bodySmall, color = Tone.Muted,
             )
             Spacer(Modifier.height(8.dp))
             Button(onClick = openLearn) { Text("Learn switches") }
@@ -391,7 +391,7 @@ private fun InfoSwitchPage(openLearn: () -> Unit) {
         Text(
             "The cluster still does its own job too (it cancels calls and clears messages). " +
                 "Answers like range or fuel appear on the cluster's text line.",
-            style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+            style = MaterialTheme.typography.bodySmall, color = Tone.Muted,
         )
     }
 
@@ -421,11 +421,11 @@ private fun InfoSwitchPage(openLearn: () -> Unit) {
         Text(
             "Urban and Rain are limited to 103 km/h, Sport to 114 km/h (owner's manual). " +
                 "Switch modes with the Mode button while stopped.",
-            style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+            style = MaterialTheme.typography.bodySmall, color = Tone.Muted,
         )
         Spacer(Modifier.height(8.dp))
         if (current == null) {
-            Text("Connect to the bike to see the current mode.", color = Rtr.Muted)
+            Text("Connect to the bike to see the current mode.", color = Tone.Muted)
         } else {
             Text("The bike reports mode $current. Which mode does the cluster show?", fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
@@ -446,7 +446,7 @@ private fun InfoSwitchPage(openLearn: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text(
                 "Confirmed: " + names.entries.sortedBy { it.key }.joinToString { "${it.key} = ${it.value}" },
-                style = MaterialTheme.typography.bodySmall, color = Rtr.Muted,
+                style = MaterialTheme.typography.bodySmall, color = Tone.Muted,
             )
             TextButton(onClick = { names = emptyMap(); Prefs.modeNames = "" }) { Text("Reset") }
         }
@@ -472,7 +472,7 @@ private fun ActionRow(title: String, selected: String, onSelect: (String) -> Uni
                             RadioButton(selected = a == action, onClick = { onSelect(a.name); open = false })
                             Column(Modifier.padding(start = 8.dp)) {
                                 Text(a.label, fontWeight = FontWeight.SemiBold)
-                                Text(a.detail, style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+                                Text(a.detail, style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
                             }
                         }
                     }
@@ -500,7 +500,7 @@ private fun ConnectPage(permissionsGranted: Boolean, onRequestPermissions: () ->
             "1. Switch the ignition on.\n2. Force-stop the TVS Connect app.\n3. Turn off Bluetooth on any other phone paired with the bike.\n" +
                 "The cluster accepts only one connection at a time.",
             style = MaterialTheme.typography.bodySmall,
-            color = Rtr.Muted,
+            color = Tone.Muted,
         )
     }
     Spacer(Modifier.height(12.dp))
@@ -538,15 +538,15 @@ private fun ConnectPage(permissionsGranted: Boolean, onRequestPermissions: () ->
 private fun DeviceRow(f: Found, onClick: () -> Unit) {
     Panel(
         Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick),
-        color = if (f.looksLikeCluster) Rtr.RedDeep else Rtr.Panel,
+        color = if (f.looksLikeCluster) Tone.RedDeep else Tone.Panel,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(f.name ?: "(no name)", fontWeight = if (f.looksLikeCluster) FontWeight.Bold else FontWeight.Normal)
-                Text(f.address, style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
-                if (f.looksLikeCluster) Text("Looks like your bike — tap to connect", style = MaterialTheme.typography.labelSmall, color = Rtr.Amber)
+                Text(f.address, style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
+                if (f.looksLikeCluster) Text("Looks like your bike — tap to connect", style = MaterialTheme.typography.labelSmall, color = Tone.Amber)
             }
-            Text("${f.rssi} dBm", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+            Text("${f.rssi} dBm", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
         }
     }
 }
@@ -560,7 +560,7 @@ private fun testStep(m: Maneuver, dist: Int, text: String, remaining: Int = 5400
 private fun DisplayTestsPage() {
     val link by AppState.link.collectAsState()
     if (link.phase != LinkPhase.LIVE) {
-        Text("Connect to the bike first; the tests send to the cluster.", color = Rtr.Amber, modifier = Modifier.padding(bottom = 8.dp))
+        Text("Connect to the bike first; the tests send to the cluster.", color = Tone.Amber, modifier = Modifier.padding(bottom = 8.dp))
     }
     Panel(Modifier.fillMaxWidth()) {
         Text("Directions", fontWeight = FontWeight.SemiBold)
@@ -579,7 +579,7 @@ private fun DisplayTestsPage() {
     Spacer(Modifier.height(12.dp))
     Panel(Modifier.fillMaxWidth()) {
         Text("Arrow codes", fontWeight = FontWeight.SemiBold)
-        Text("Step through codes and note which picture the cluster draws.", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+        Text("Step through codes and note which picture the cluster draws.", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
         var code by remember { mutableStateOf("0") }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedTextField(
@@ -606,7 +606,7 @@ private fun DisplayTestsPage() {
         Text(
             "Sends \"BIKE TEST 123\". If the cluster shows it backwards, switch the setting below.",
             style = MaterialTheme.typography.bodySmall,
-            color = Rtr.Muted,
+            color = Tone.Muted,
         )
         Spacer(Modifier.height(6.dp))
         Button(onClick = { AppState.clusterTexts.tryEmit("BIKE TEST 123") }) { Text("Send test text") }
@@ -666,12 +666,12 @@ private fun LearnSwitchesPage() {
             "The bike reports its lamps and side stand as bits the app does not know yet. " +
                 "This teaches it in about a minute. Bike standing still, ignition on, engine off, app connected.",
             style = MaterialTheme.typography.bodySmall,
-            color = Rtr.Muted,
+            color = Tone.Muted,
         )
     }
     Spacer(Modifier.height(12.dp))
     if (link.phase != LinkPhase.LIVE) {
-        Text("Connect to the bike first.", color = Rtr.Amber)
+        Text("Connect to the bike first.", color = Tone.Amber)
         return
     }
     Panel(Modifier.fillMaxWidth()) {
@@ -712,7 +712,7 @@ private fun LearnSwitchesPage() {
         }
         if (lastResult.isNotBlank()) {
             Spacer(Modifier.height(8.dp))
-            Text(lastResult, color = if (lastResult.contains("found") || lastResult.contains("captured")) Rtr.Green else Rtr.Amber)
+            Text(lastResult, color = if (lastResult.contains("found") || lastResult.contains("captured")) Tone.Green else Tone.Amber)
         }
     }
     if (Prefs.switchMap.isNotBlank()) {
@@ -742,7 +742,7 @@ private fun AdvancedPage() {
         SchemeChooser("Decode bike data as", inScheme) { inScheme = it; Prefs.inboundScheme = it }
         var outScheme by remember { mutableStateOf(Prefs.outboundScheme) }
         SchemeChooser("Scramble data sent to bike as", outScheme) { outScheme = it; Prefs.outboundScheme = it }
-        Text("Leave both on Auto; it is detected from each frame's checksum.", style = MaterialTheme.typography.bodySmall, color = Rtr.Muted)
+        Text("Leave both on Auto; it is detected from each frame's checksum.", style = MaterialTheme.typography.bodySmall, color = Tone.Muted)
     }
 }
 

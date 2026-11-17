@@ -130,40 +130,40 @@ object NavParser {
     fun maneuverOf(raw: String): Maneuver? {
         val s = raw.lowercase(Locale.US).replace('‑', '-')
         fun has(vararg w: String) = w.any { Regex("""\b""" + Regex.escape(it) + """\b""").containsMatchIn(s) }
-        val left = has("left\b")
-        val right = has("right\b")
+        val left = has("left")
+        val right = has("right")
         return when {
             s.contains("arrive") || s.contains("arriving") || has("destination") -> Maneuver.ARRIVE
             has("roundabout", "rotary", "traffic circle") -> when {
                 has("u-turn", "u turn") -> Maneuver.ROUNDABOUT_UTURN
-                has("sharp left\b") -> Maneuver.ROUNDABOUT_SHARP_LEFT
-                has("sharp right\b") -> Maneuver.ROUNDABOUT_SHARP_RIGHT
-                has("slight left\b") -> Maneuver.ROUNDABOUT_SLIGHT_LEFT
-                has("slight right\b") -> Maneuver.ROUNDABOUT_SLIGHT_RIGHT
+                has("sharp left") -> Maneuver.ROUNDABOUT_SHARP_LEFT
+                has("sharp right") -> Maneuver.ROUNDABOUT_SHARP_RIGHT
+                has("slight left") -> Maneuver.ROUNDABOUT_SLIGHT_LEFT
+                has("slight right") -> Maneuver.ROUNDABOUT_SLIGHT_RIGHT
                 has("1st exit", "first exit") -> Maneuver.ROUNDABOUT_LEFT
                 has("2nd exit", "second exit") -> Maneuver.ROUNDABOUT_STRAIGHT
                 has("3rd exit", "third exit") -> Maneuver.ROUNDABOUT_RIGHT
                 has("4th exit", "fourth exit") -> Maneuver.ROUNDABOUT_UTURN
-                has("turn left", "exit left\b") -> Maneuver.ROUNDABOUT_LEFT
-                has("turn right", "exit right\b") -> Maneuver.ROUNDABOUT_RIGHT
+                has("turn left", "exit left") -> Maneuver.ROUNDABOUT_LEFT
+                has("turn right", "exit right") -> Maneuver.ROUNDABOUT_RIGHT
                 has("straight") -> Maneuver.ROUNDABOUT_STRAIGHT
                 else -> Maneuver.ROUNDABOUT
             }
             has("u-turn", "u turn", "make a u") -> if (left) Maneuver.UTURN_LEFT else Maneuver.UTURN_RIGHT
-            has("sharp left\b") -> Maneuver.SHARP_LEFT
-            has("sharp right\b") -> Maneuver.SHARP_RIGHT
-            has("slight left", "bear left\b") -> Maneuver.SLIGHT_LEFT
-            has("slight right", "bear right\b") -> Maneuver.SLIGHT_RIGHT
-            has("keep left", "stay left", "fork left\b") -> Maneuver.KEEP_LEFT
-            has("keep right", "stay right", "fork right\b") -> Maneuver.KEEP_RIGHT
+            has("sharp left") -> Maneuver.SHARP_LEFT
+            has("sharp right") -> Maneuver.SHARP_RIGHT
+            has("slight left", "bear left") -> Maneuver.SLIGHT_LEFT
+            has("slight right", "bear right") -> Maneuver.SLIGHT_RIGHT
+            has("keep left", "stay left", "fork left") -> Maneuver.KEEP_LEFT
+            has("keep right", "stay right", "fork right") -> Maneuver.KEEP_RIGHT
             has("merge") -> when {
                 left -> Maneuver.MERGE_LEFT
                 right -> Maneuver.MERGE_RIGHT
                 else -> Maneuver.MERGE
             }
             has("ferry") -> Maneuver.FERRY
-            has("turn left\b") -> Maneuver.LEFT
-            has("turn right\b") -> Maneuver.RIGHT
+            has("turn left") -> Maneuver.LEFT
+            has("turn right") -> Maneuver.RIGHT
             has("exit", "ramp") && (left || right) -> if (left) Maneuver.KEEP_LEFT else Maneuver.KEEP_RIGHT
             s.startsWith("head") -> Maneuver.DEPART
             has("continue", "straight", "go straight") -> Maneuver.STRAIGHT

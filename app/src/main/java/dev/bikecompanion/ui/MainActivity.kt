@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         setContent {
-            RtrTheme { AppRoot() }
+            BikeTheme { AppRoot() }
         }
     }
 }
@@ -100,9 +100,9 @@ fun AppRoot() {
     })
 
     Scaffold(
-        containerColor = Rtr.Bg,
+        containerColor = Tone.Bg,
         bottomBar = {
-            NavigationBar(containerColor = Rtr.Panel) {
+            NavigationBar(containerColor = Tone.Panel) {
                 tabs.forEachIndexed { i, t ->
                     NavigationBarItem(
                         selected = tab == i,
@@ -113,11 +113,11 @@ fun AppRoot() {
                         icon = { Icon(t.icon, contentDescription = t.label) },
                         label = { Text(t.label) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Rtr.Text,
-                            selectedTextColor = Rtr.Text,
-                            indicatorColor = Rtr.RedDeep,
-                            unselectedIconColor = Rtr.Muted,
-                            unselectedTextColor = Rtr.Muted,
+                            selectedIconColor = Tone.Text,
+                            selectedTextColor = Tone.Text,
+                            indicatorColor = Tone.RedDeep,
+                            unselectedIconColor = Tone.Muted,
+                            unselectedTextColor = Tone.Muted,
                         ),
                     )
                 }
@@ -127,7 +127,7 @@ fun AppRoot() {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Rtr.Bg)
+                .background(Tone.Bg)
                 .padding(padding),
         ) {
             when (tab) {

@@ -84,7 +84,7 @@ fun RelayAppsPage() {
         "Incoming calls and Google Maps directions have their own switches. Pick any other app here and the " +
             "cluster shows who a notification is from. The message itself is never shown.",
         style = MaterialTheme.typography.bodyMedium,
-        color = Rtr.Muted,
+        color = Tone.Muted,
     )
     Spacer(Modifier.height(12.dp))
     OutlinedTextField(
@@ -97,7 +97,7 @@ fun RelayAppsPage() {
     Spacer(Modifier.height(12.dp))
     val list = apps
     if (list == null) {
-        Text("Loading apps…", color = Rtr.Muted)
+        Text("Loading apps…", color = Tone.Muted)
         return
     }
     val q = query.trim().lowercase(Locale.getDefault())
@@ -120,7 +120,7 @@ fun RelayAppsPage() {
                 if (icon != null) {
                     Image(icon, contentDescription = null, modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)))
                 } else {
-                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Rtr.Panel2))
+                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Tone.Panel2))
                 }
                 Spacer(Modifier.width(14.dp))
                 Text(app.label, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -149,13 +149,13 @@ fun ArrowsPage() {
             "directions text names the turn. If an arrow here is wrong, tap it and pick the right one; the " +
             "app uses your choice from then on.",
         style = MaterialTheme.typography.bodyMedium,
-        color = Rtr.Muted,
+        color = Tone.Muted,
     )
     Spacer(Modifier.height(16.dp))
     if (entries.isEmpty()) {
         Panel(Modifier.fillMaxWidth()) {
             Text("No arrows yet", fontWeight = FontWeight.SemiBold)
-            Text("Start a route in Google Maps; arrows appear here as you ride.", color = Rtr.Muted, style = MaterialTheme.typography.bodySmall)
+            Text("Start a route in Google Maps; arrows appear here as you ride.", color = Tone.Muted, style = MaterialTheme.typography.bodySmall)
         }
         return
     }
@@ -178,7 +178,7 @@ fun ArrowsPage() {
                         Text(
                             m.label,
                             fontWeight = if (m == e.maneuver) FontWeight.Bold else FontWeight.Normal,
-                            color = if (m == e.maneuver) Rtr.Red else Rtr.Text,
+                            color = if (m == e.maneuver) Tone.Red else Tone.Text,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -224,7 +224,7 @@ private fun ArrowTile(e: ArrowStore.Entry, modifier: Modifier, onClick: () -> Un
     Column(
         modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Rtr.Panel)
+            .background(Tone.Panel)
             .clickable(onClick = onClick)
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -247,7 +247,7 @@ private fun ArrowTile(e: ArrowStore.Entry, modifier: Modifier, onClick: () -> Un
         Text(
             e.via.label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (e.via == ArrowStore.Via.YOU) Rtr.Green else Rtr.Muted,
+            color = if (e.via == ArrowStore.Via.YOU) Tone.Green else Tone.Muted,
             textAlign = TextAlign.Center,
             maxLines = 2,
         )

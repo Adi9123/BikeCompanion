@@ -42,7 +42,7 @@ import java.util.Locale
 fun DiagnosticsScreen() {
     var sub by rememberSaveable { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = sub, containerColor = Rtr.Bg, contentColor = Rtr.Text) {
+        TabRow(selectedTabIndex = sub, containerColor = Tone.Bg, contentColor = Tone.Text) {
             Tab(selected = sub == 0, onClick = { sub = 0 }, text = { Text("Live data") })
             Tab(selected = sub == 1, onClick = { sub = 1 }, text = { Text("Log") })
         }
@@ -58,7 +58,7 @@ private fun FramesPane() {
     val now = rememberNow()
 
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        Modifier.fillMaxSize().padding(horizontal = Space.gutter),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { Box(Modifier.padding(top = 16.dp)) { ConnectionCard(link, frames.values, now) } }
