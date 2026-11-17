@@ -3,6 +3,14 @@
 All notable changes to RTR Companion. Versions follow
 [semantic versioning](https://semver.org/); dates are release dates.
 
+## [0.8.1] - 2026-11-17
+
+- **Restore works with any file manager.** The file picker only offered files
+  labelled exactly as zip, so many phones showed the backup greyed out. Any
+  file can be picked now; the app checks it is a backup and says so if not.
+  Backups from RTR Companion restore too.
+- Backups now include your corrected navigation arrows and theme choice.
+
 ## [0.8.0] - 2026-11-17
 
 **Now called Bike Companion.** RTR and Apache are TVS trademarks, so the app

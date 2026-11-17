@@ -341,7 +341,7 @@ private fun MoreMain(permissionsGranted: Boolean, onRequestPermissions: () -> Un
                 }
             }
             Divider()
-            NavRow("Restore", "Bring back a backup file") { restorePicker.launch(arrayOf("application/zip", "application/octet-stream")) }
+            NavRow("Restore", "Bring back a backup file") { restorePicker.launch(arrayOf("*/*")) }
         }
 
         // ------------------------------------------------------- tools

@@ -19,7 +19,7 @@ import java.util.zip.ZipOutputStream
  * that carry history (fuel counter totals, learned switches, the bike).
  */
 object Backup {
-    private val DIRS = listOf("rides", "fuel", "garage")
+    private val DIRS = listOf("rides", "fuel", "garage", "nav-arrows")
 
     private fun prefsText(): String = buildString {
         append("injTotal=").append(Prefs.injTotal).append('\n')
@@ -30,6 +30,7 @@ object Backup {
         append("reserveLitres=").append(Prefs.reserveLitres).append('\n')
         append("fuelBars=").append(Prefs.fuelBars).append('\n')
         append("riderName=").append(Prefs.riderName).append('\n')
+        append("themeMode=").append(Prefs.themeMode).append('\n')
         Prefs.lastScheme?.let { append("lastScheme=").append(it).append('\n') }
         Prefs.lastAddress?.let { append("lastAddress=").append(it).append('\n') }
         Prefs.lastName?.let { append("lastName=").append(it).append('\n') }
@@ -50,6 +51,7 @@ object Backup {
                 "reserveLitres" -> v.toDoubleOrNull()?.let { Prefs.reserveLitres = it }
                 "fuelBars" -> v.toIntOrNull()?.let { Prefs.fuelBars = it }
                 "riderName" -> Prefs.riderName = v
+                "themeMode" -> if (v in setOf("system", "light", "dark")) Prefs.themeMode = v
                 "lastScheme" -> Prefs.lastScheme = v
                 "lastAddress" -> Prefs.lastAddress = v
                 "lastName" -> Prefs.lastName = v
@@ -79,9 +81,14 @@ object Backup {
         return out
     }
 
-    /** Restores a backup. Returns how many files were restored. */
+    /**
+     * Restores a backup and returns how many files came back. Any file can be
+     * picked (file managers label zips inconsistently), so this checks the
+     * contents and throws if it is not one of our backups.
+     */
     fun restore(ctx: Context, uri: Uri): Int {
         var count = 0
+        var recognised = false
         val input = ctx.contentResolver.openInputStream(uri) ?: return 0
         ZipInputStream(input.buffered()).use { zip ->
             while (true) {
@@ -89,6 +96,7 @@ object Backup {
                 val name = e.name
                 if (e.isDirectory || name.contains("..")) continue
                 if (name == "prefs.txt") {
+                    recognised = true
                     applyPrefs(zip.readBytes().decodeToString())
                     continue
                 }
@@ -97,8 +105,10 @@ object Backup {
                 target.parentFile?.mkdirs()
                 target.outputStream().use { zip.copyTo(it) }
                 count++
+                recognised = true
             }
         }
+        require(recognised) { "Not a Bike Companion backup" }
         FuelStore.version.value++
         GarageStore.version.value++
         return count
