@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+
 package dev.bikecompanion.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme

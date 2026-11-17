@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -100,7 +101,7 @@ object Springs {
     fun <T> pop(): AnimationSpec<T> = spring(dampingRatio = 0.42f, stiffness = 600f)
 }
 
-fun <T> glide(duration: Int = Motion.Base, delay: Int = 0): AnimationSpec<T> =
+fun <T> glide(duration: Int = Motion.Base, delay: Int = 0): FiniteAnimationSpec<T> =
     if (Motion.reduced) tween(0) else tween(duration, delay, Ease.Glide)
 
 // -------------------------------------------------------------- modifiers
