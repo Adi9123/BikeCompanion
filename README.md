@@ -2,7 +2,7 @@
 
 # Bike Companion
 
-**An independent Android companion app for TVS Apache motorcycles with SmartXonnect.**
+**An independent Android companion app for TVS Apache motorcycles with SmartXConnect.**
 Live dashboard, ride recording and reports, fuel and service tracking, and
 Google Maps directions on your bike's cluster. No account, no cloud.
 
@@ -17,7 +17,7 @@ Google Maps directions on your bike's cluster. No account, no cloud.
 </div>
 
 > **Unofficial.** This app is not made, endorsed or supported by TVS Motor
-> Company. "TVS", "Apache", "RTR" and "SmartXonnect" are trademarks of their
+> Company. "TVS", "Apache", "RTR" and "SmartXConnect" are trademarks of their
 > owner and are used here only to say which bikes the app works with. Use it
 > at your own risk, and never handle your phone while riding.
 
@@ -91,10 +91,10 @@ default). The app then shows only what that model sends.
 
 | Model | Status |
 | :--- | :--- |
-| Apache RTR 160 4V (SmartXonnect, LCD cluster) | Tested |
-| Raider 125 (SmartXonnect) | Tested |
+| Apache RTR 160 4V (SmartXConnect, LCD cluster) | Tested |
+| Raider 125 (SmartXConnect) | Tested |
 | Apache RTR 160 2V, Apache RTR 180 | Should work, not tested yet |
-| Ntorq 125, Jupiter (SmartXonnect) | Should work, not tested yet |
+| Ntorq 125, Jupiter (SmartXConnect) | Should work, not tested yet |
 | Apache RR 310, RTR 310, Ronin, iQube, TVS X, Orbiter | Not supported yet (different connection) |
 
 What each model sends, and why the model choice matters: [docs/MODELS.md](docs/MODELS.md).
@@ -126,7 +126,7 @@ From then on fuel used, fuel left and range are measured, not estimated.
   ┌───────────┐ ─────────────────────────────────────────────▶ ┌──────────────┐
   │  Phone    │   phone status every 2 s, directions,          │  Bike        │
   │  RTR      │   caller / message text, rider name            │  cluster     │
-  │ Companion │ ◀───────────────────────────────────────────── │ (SmartXonnect)│
+  │ Companion │ ◀───────────────────────────────────────────── │ (SmartXConnect)│
   └───────────┘   speed, RPM, gear, odometer, trips,           └──────────────┘
         ▲         temperatures, battery, fuel, lamps
         │
@@ -244,7 +244,7 @@ This is a summary for contributors and users, **not legal advice**.
   Directive 2009/24/EC, article 6; and in the US, 17 U.S.C. § 1201(f). The
   official app's own terms of use may still restrict reverse engineering for
   people who accepted them.
-- **Trademarks.** TVS, Apache, RTR and SmartXonnect belong to TVS Motor
+- **Trademarks.** TVS, Apache, RTR and SmartXConnect belong to TVS Motor
   Company. Naming them to say which bikes the app works with is the intended
   use here; the app must not suggest it is official. A neutral app name would
   be safer before any wide distribution, such as an app-store listing.
@@ -267,7 +267,7 @@ This is a summary for contributors and users, **not legal advice**.
 - India, Copyright Act 1957, s. 52(1)(ab): <https://www.indiacode.nic.in/handle/123456789/1367>
 - EU Directive 2009/24/EC: <https://eur-lex.europa.eu/eli/dir/2009/24/oj>
 - 17 U.S.C. § 1201(f): <https://www.law.cornell.edu/uscode/text/17/1201>
-- Earlier community work on SmartXonnect for the Ntorq, which showed it could
+- Earlier community work on SmartXConnect for the Ntorq, which showed it could
   be done: <https://github.com/athulkrishna2015/TVSRideCompanion>
 
 ## Credits and third-party licences
